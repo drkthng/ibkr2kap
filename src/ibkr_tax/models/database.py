@@ -1,5 +1,5 @@
 from decimal import Decimal
-from sqlalchemy import Numeric, ForeignKey
+from sqlalchemy import Numeric, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from typing import List
 
@@ -96,3 +96,15 @@ class CashTransaction(Base):
     report_date: Mapped[str] = mapped_column()
 
     account: Mapped["Account"] = relationship(back_populates="cash_transactions")
+
+class ExchangeRate(Base):
+    """ExchangeRate model caching ECB reference rates."""
+    __tablename__ = "exchange_rates"
+    __table_args__ = (
+        UniqueConstraint("rate_date", "source_currency", name="uq_rate_date_currency"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rate_date: Mapped[str] = mapped_column(index=True)  # ISO date string YYYY-MM-DD
+    source_currency: Mapped[str] = mapped_column()       # e.g. "USD", "GBP"
+    rate_to_eur: Mapped[Decimal] = mapped_column(Numeric(18, 6))
