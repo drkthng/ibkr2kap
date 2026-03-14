@@ -18,6 +18,8 @@
 
 **Planning Lock**: No implementation code until SPEC.md contains "Status: FINALIZED".
 
+**Phase-Specific Branching**: Always create and work on a branch named `phase-{N}` for any phase-specific work. Never commit directly to `main`.
+
 ---
 
 ## 5. Terminal Command Protocol (STRICT ATOMIC EXECUTION)

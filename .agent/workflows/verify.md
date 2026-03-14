@@ -44,6 +44,20 @@ Read:
 
 ---
 
+## 1.5. Ensure Phase Branch
+
+**PowerShell:**
+```powershell
+git checkout "phase-$PHASE"
+```
+
+**Bash:**
+```bash
+git checkout "phase-$PHASE"
+```
+
+---
+
 ## 2. Extract Must-Haves
 
 From the phase definition, identify **must-haves** — requirements that MUST be true for the phase to be complete.

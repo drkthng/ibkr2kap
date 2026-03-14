@@ -34,6 +34,9 @@ Get-Content ".gsd/STATE.md" -ErrorAction SilentlyContinue
 
 **If .gsd/ doesn't exist:** Error — project not initialized.
 
+> [!IMPORTANT]
+> **Branching Rule**: Before executing tasks, ensure you are on the `phase-{phase}` branch by running `git checkout phase-{phase}`. Do not commit to `main`.
+
 ### Step 2: Load Plan
 
 Read the plan file provided in your prompt context.

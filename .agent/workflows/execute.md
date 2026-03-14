@@ -92,6 +92,20 @@ mkdir -p "$PHASE_DIR"
 
 ---
 
+## 3.5. Ensure Phase Branch
+
+**PowerShell:**
+```powershell
+git checkout "phase-$PHASE"
+```
+
+**Bash:**
+```bash
+git checkout "phase-$PHASE"
+```
+
+---
+
 ## 4. Discover Plans
 
 **PowerShell:**

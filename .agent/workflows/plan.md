@@ -173,6 +173,23 @@ mkdir -p "$PHASE_DIR"
 
 ---
 
+## 4.5. Ensure Phase Branch
+
+**PowerShell:**
+```powershell
+git checkout "phase-$PHASE" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    git checkout -b "phase-$PHASE"
+}
+```
+
+**Bash:**
+```bash
+git checkout "phase-$PHASE" 2>/dev/null || git checkout -b "phase-$PHASE"
+```
+
+---
+
 ## 5. Handle Research
 
 **If `--gaps` flag:** Skip research (gap closure uses VERIFICATION.md).

@@ -33,6 +33,23 @@ Read:
 
 ---
 
+## 1.5. Ensure Phase Branch
+
+**PowerShell:**
+```powershell
+git checkout "phase-$PHASE" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    git checkout -b "phase-$PHASE"
+}
+```
+
+**Bash:**
+```bash
+git checkout "phase-$PHASE" 2>/dev/null || git checkout -b "phase-$PHASE"
+```
+
+---
+
 ## 2. Identify Research Questions
 
 What needs to be understood before planning?
