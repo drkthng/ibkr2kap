@@ -24,7 +24,7 @@ This file provides Gemini-specific integration. For the complete methodology, se
 
 ---
 
-## 5. Terminal Command Protocol (STRICT ATOMIC EXECUTION)
+## Terminal Command Protocol (STRICT ATOMIC EXECUTION)
 
 You are strictly forbidden from executing multiple operations in a single tool call. You must operate the terminal interactively, one step and one target at a time. **Do not attempt to save tokens by batching commands or arguments.**
 
