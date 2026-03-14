@@ -22,7 +22,7 @@
 **Objective**: Map strict SQLAlchemy 2.0 ORM models (Account, Trade, CashTransaction, FIFOLot, Gain) representing the full IBKR data structure and tax matching logic.
 
 ### Phase 2: Pydantic Validation Schemas
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Build strict, typed data validation for raw IBKR inputs before database insertion.
 
 ### Phase 3: ECB Exchange Rates
