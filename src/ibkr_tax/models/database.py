@@ -16,23 +16,29 @@ class Account(Base):
     currency: Mapped[str] = mapped_column(default="EUR")
 
     trades: Mapped[List["Trade"]] = relationship(back_populates="account")
-    dividends: Mapped[List["Dividend"]] = relationship(back_populates="account")
+    cash_transactions: Mapped[List["CashTransaction"]] = relationship(back_populates="account")
 
 class Trade(Base):
     """Trade model tracking transactional data."""
     __tablename__ = "trades"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    ib_trade_id: Mapped[str] = mapped_column(unique=True, index=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     asset_category: Mapped[str] = mapped_column()
     symbol: Mapped[str] = mapped_column(index=True)
+    description: Mapped[str] = mapped_column()
     trade_date: Mapped[str] = mapped_column()  # ISO format string or Date
     settle_date: Mapped[str] = mapped_column(index=True)
+    currency: Mapped[str] = mapped_column()
+    fx_rate_to_base: Mapped[Decimal] = mapped_column(Numeric(18, 6))
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     trade_price: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    proceeds: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     taxes: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
     ib_commission: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
     buy_sell: Mapped[str] = mapped_column()
+    open_close_indicator: Mapped[str] = mapped_column()
 
     account: Mapped["Account"] = relationship(back_populates="trades")
     fifo_lots: Mapped[List["FIFOLot"]] = relationship(back_populates="trade")
@@ -72,17 +78,21 @@ class Gain(Base):
     sell_trade: Mapped["Trade"] = relationship(back_populates="gains")
     buy_lot: Mapped["FIFOLot"] = relationship(back_populates="gains")
 
-class Dividend(Base):
-    """Dividend model tracking dividend income."""
-    __tablename__ = "dividends"
+class CashTransaction(Base):
+    """CashTransaction model tracking dividends, taxes, interest, etc."""
+    __tablename__ = "cash_transactions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
-    symbol: Mapped[str] = mapped_column(index=True)
-    pay_date: Mapped[str] = mapped_column(index=True)
-    gross_rate: Mapped[Decimal] = mapped_column(Numeric(18, 4))
-    gross_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4))
-    withholding_tax: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
+    symbol: Mapped[str] = mapped_column(index=True, nullable=True)
+    description: Mapped[str] = mapped_column()
+    date_time: Mapped[str] = mapped_column(index=True)
+    settle_date: Mapped[str] = mapped_column(index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    type: Mapped[str] = mapped_column()
     currency: Mapped[str] = mapped_column()
+    fx_rate_to_base: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    action_id: Mapped[str] = mapped_column(index=True, nullable=True)
+    report_date: Mapped[str] = mapped_column()
 
-    account: Mapped["Account"] = relationship(back_populates="dividends")
+    account: Mapped["Account"] = relationship(back_populates="cash_transactions")

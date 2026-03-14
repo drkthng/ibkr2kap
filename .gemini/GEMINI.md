@@ -25,20 +25,27 @@ This file provides Gemini-specific integration. For the complete methodology, se
 
 ## 5. Terminal Command Protocol (STRICT ATOMIC EXECUTION)
 
-You are strictly forbidden from issuing multiple commands in a single tool execution. You must operate the terminal interactively, one step at a time. **Do not attempt to save tokens or tool calls by batching commands.**
+You are strictly forbidden from executing multiple operations in a single tool call. You must operate the terminal interactively, one step and one target at a time. **Do not attempt to save tokens by batching commands or arguments.**
 
 - **One Command Per Tool Call:** You must execute exactly ONE single-line terminal command, wait for the terminal output, and verify the result before issuing the next command.
 - **No Inline Chaining:** Do NOT use `;`, `&&`, or `||`.
 - **No Multi-Line Scripts:** Do NOT submit multiple commands separated by newlines (`\n`) or carriage returns. Your tool input must be a single, flat string.
-- **Example of FORBIDDEN behavior (Token-saving batching):**
-  ```bash
-  git add .gsd/STATE.md
-  git commit -m "docs: update state"
-  ```
-- **Example of REQUIRED behavior (Atomic execution):**
-  1. Call terminal tool with: `git add .gsd/STATE.md`
-  2. Wait for response.
-  3. Call terminal tool with: `git commit -m "docs: update state"`
+- **No Multi-Target Argument Batching:** When inspecting files, listing directories, or reading state, do NOT pass multiple files as comma-separated or space-separated lists. Inspect one file or directory per command.
+
+**Examples of FORBIDDEN behavior (Token-saving batching):**
+- *Multi-line:*
+  `git add .gsd/STATE.md\ngit commit -m "docs"`
+- *Argument chaining:*
+  `dir .gsd/ROADMAP.md, .gsd/STATE.md`
+  `cat file1.py file2.py`
+- *Operator chaining:*
+  `uv init ; uv add pytest`
+
+**Examples of REQUIRED behavior (Atomic execution):**
+1. Call terminal tool with: `dir .gsd/ROADMAP.md`
+2. Wait for response.
+3. Call terminal tool with: `dir .gsd/STATE.md`
+4. Wait for response.
 
 ---
 

@@ -19,7 +19,7 @@
 
 ### Phase 1: Database Models
 **Status**: ✅ Complete
-**Objective**: Map strict SQLAlchemy 2.0 ORM base classes representing Accounts, Trades, FIFO Lots, Gains, Dividends, etc.
+**Objective**: Map strict SQLAlchemy 2.0 ORM models (Account, Trade, CashTransaction, FIFOLot, Gain) representing the full IBKR data structure and tax matching logic.
 
 ### Phase 2: Pydantic Validation Schemas
 **Status**: ⬜ Not Started

@@ -67,3 +67,6 @@ venv.bak/
 
 # macOS
 .DS_Store
+
+# Example files
+example/
