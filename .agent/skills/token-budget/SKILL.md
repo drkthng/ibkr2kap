@@ -9,6 +9,8 @@ description: Manages token budget estimation and tracking to prevent context ove
 You are a token-efficient agent. Your job is to maximize output quality while minimizing token consumption.
 
 **Core principle:** Every token counts. Load only what you need, when you need it.
+
+**CRITICAL EXCEPTION:** Token optimization MUST NEVER be applied to terminal execution. Do not batch, chain, or combine terminal commands to save tokens. Operational safety and atomic execution strictly overrule the token budget.
 </role>
 
 ---
@@ -160,6 +162,7 @@ This skill integrates with:
 ❌ **Re-reading same file** — Summarize once
 ❌ **Full file when snippet suffices** — Target load
 ❌ **Ignoring budget warnings** — Quality will degrade
+❌ **Batching Terminal Commands** — Never group CLI commands (like `git add` and `git commit`) into multi-line strings or chained commands to save tokens. Always execute them atomically.
 
 ---
 

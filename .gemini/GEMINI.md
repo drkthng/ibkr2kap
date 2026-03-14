@@ -23,20 +23,22 @@ This file provides Gemini-specific integration. For the complete methodology, se
 
 ---
 
-## Execution & Terminal Standards
+## 5. Terminal Command Protocol (STRICT ATOMIC EXECUTION)
 
-- **Atomic Execution:** One logical command per tool call.
-- **No Sequential Chaining:** Do not use `;` or `&&` to bypass iterative execution. Pipes (`|`) are permitted for single data transformations.
-- **Immediate Verification:** Check the exit code and stdout after every single command before proceeding.
+You are strictly forbidden from issuing multiple commands in a single tool execution. You must operate the terminal interactively, one step at a time. **Do not attempt to save tokens or tool calls by batching commands.**
 
----
-
-
-## Execution & Terminal Standards
-
-- **Atomic Execution:** One logical command per tool call.
-- **No Sequential Chaining:** Do not use `;` or `&&` to bypass iterative execution. Pipes (`|`) are permitted for single data transformations.
-- **Immediate Verification:** Check the exit code and stdout after every single command before proceeding.
+- **One Command Per Tool Call:** You must execute exactly ONE single-line terminal command, wait for the terminal output, and verify the result before issuing the next command.
+- **No Inline Chaining:** Do NOT use `;`, `&&`, or `||`.
+- **No Multi-Line Scripts:** Do NOT submit multiple commands separated by newlines (`\n`) or carriage returns. Your tool input must be a single, flat string.
+- **Example of FORBIDDEN behavior (Token-saving batching):**
+  ```bash
+  git add .gsd/STATE.md
+  git commit -m "docs: update state"
+  ```
+- **Example of REQUIRED behavior (Atomic execution):**
+  1. Call terminal tool with: `git add .gsd/STATE.md`
+  2. Wait for response.
+  3. Call terminal tool with: `git commit -m "docs: update state"`
 
 ---
 
