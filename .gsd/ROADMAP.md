@@ -14,7 +14,7 @@
 ## Phases
 
 ### Phase 0: Project Setup
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Basic project scaffolding, Poetry/uv configuration, SQLite + SQLAlchemy setup, and a "Hello World" test.
 
 ### Phase 1: Database Models
