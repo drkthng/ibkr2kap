@@ -23,6 +23,24 @@ This file provides Gemini-specific integration. For the complete methodology, se
 
 ---
 
+## Execution & Terminal Standards
+
+- **Atomic Execution:** One logical command per tool call.
+- **No Sequential Chaining:** Do not use `;` or `&&` to bypass iterative execution. Pipes (`|`) are permitted for single data transformations.
+- **Immediate Verification:** Check the exit code and stdout after every single command before proceeding.
+
+---
+
+
+## Execution & Terminal Standards
+
+- **Atomic Execution:** One logical command per tool call.
+- **No Sequential Chaining:** Do not use `;` or `&&` to bypass iterative execution. Pipes (`|`) are permitted for single data transformations.
+- **Immediate Verification:** Check the exit code and stdout after every single command before proceeding.
+
+---
+
+
 ## Quick Reference
 
 ```

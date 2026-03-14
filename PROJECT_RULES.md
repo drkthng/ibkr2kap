@@ -20,6 +20,15 @@
 
 ---
 
+## Execution & Terminal Standards
+
+- **Atomic Execution:** One logical command per tool call.
+- **No Sequential Chaining:** Do not use `;` or `&&` to bypass iterative execution. Pipes (`|`) are permitted for single data transformations.
+- **Immediate Verification:** Check the exit code and stdout after every single command before proceeding.
+
+---
+
+
 ## Proof Requirements
 
 Every change requires verification evidence:

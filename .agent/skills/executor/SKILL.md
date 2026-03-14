@@ -463,3 +463,6 @@ One task = one commit. Always.
 
 ### ✅ Verification before done
 Run verify step. Confirm done criteria. Then commit.
+
+### ❌ Chaining commands sequentially
+Do NOT use `;` or `&&` to join independent commands in a single tool call. You must issue and verify each command atomically. Pipes (`|`) are permitted for single data transformations only.
