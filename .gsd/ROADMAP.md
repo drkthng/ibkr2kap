@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Not started
+> **Current Phase**: Phase 1 complete
 > **Milestone**: v1.0
 
 ## Must-Haves (from SPEC)
@@ -18,7 +18,7 @@
 **Objective**: Basic project scaffolding, Poetry/uv configuration, SQLite + SQLAlchemy setup, and a "Hello World" test.
 
 ### Phase 1: Database Models
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Map strict SQLAlchemy 2.0 ORM base classes representing Accounts, Trades, FIFO Lots, Gains, Dividends, etc.
 
 ### Phase 2: Pydantic Validation Schemas
