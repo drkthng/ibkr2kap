@@ -1,15 +1,17 @@
 # STATE.md
 
-> **Current Phase**: 2 (completed)
+> **Current Phase**: 3 (planning complete)
 > **Last Updated**: 2026-03-14
 
 ## Current Position
-- **Phase**: 2 (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Phase**: 3 — ECB Exchange Rates
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Phase 2 (Pydantic Validation Schemas) executed successfully. Implemented AccountSchema, TradeSchema, and CashTransactionSchema with strict validation, Decimal coercion, and float rejection. Verified full compatibility with Phase 1 models via 100% passing tests in `tests/test_schemas.py`.
+Phase 3 planned with 2 plans across 2 waves:
+- **Plan 3.1 (Wave 1):** ExchangeRate DB model + ECBRateFetcher service (fetch/parse ECB CSV, persist to DB)
+- **Plan 3.2 (Wave 2):** `get_rate()` public API with weekend/holiday fallback + comprehensive pytest suite
 
 ## Next Steps
-1. Proceed to Phase 3: ECB Exchange Rates
+1. `/execute 3`
