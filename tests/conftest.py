@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from ibkr_tax.models.database import Base
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def db_engine():
     """Provides a session-wide SQLite in-memory engine."""
     engine = create_engine("sqlite:///:memory:")
