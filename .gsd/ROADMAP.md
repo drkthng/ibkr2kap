@@ -58,7 +58,7 @@
 **Objective**: Handle standard Stock Splits (changing quantities but maintaining cost basis).
 
 ### Phase 11: Excel Export
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Use `openpyxl` to produce elegantly formatted reports designed specifically for tax consultants.
 
 ### Phase 12: Streamlit UI
