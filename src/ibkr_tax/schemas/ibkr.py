@@ -117,3 +117,17 @@ class OptionEAECreate(BaseIBKRSchema):
     trade_price: Decimal = Field(default=Decimal("0"))
     multiplier: Decimal = Field(default=Decimal("100"))
     trade_id: str | None = None
+
+
+class CorporateActionSchema(BaseIBKRSchema):
+    account_id: str = Field(..., min_length=1)
+    symbol: str = Field(..., min_length=1)
+    action_type: Literal["StockSplit", "ReverseStockSplit"]
+    date: date
+    ratio: Decimal = Field(..., gt=0)
+    description: str
+
+    def to_db_dict(self) -> dict:
+        data = self.model_dump(exclude={"account_id"})
+        data["date"] = self.date.isoformat()
+        return data
