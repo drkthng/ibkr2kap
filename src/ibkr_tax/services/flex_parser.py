@@ -6,7 +6,7 @@ from datetime import datetime, date
 from ibflex import parser
 from ibflex.Types import FlexStatement, Trade, CashTransaction
 
-from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema
+from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, OptionEAECreate
 
 
 class FlexXMLParser:
@@ -140,9 +140,36 @@ class FlexXMLParser:
                 )
         return transactions
 
+    def get_option_eae(self) -> List[OptionEAECreate]:
+        eae_records = []
+        for statement in self.response.FlexStatements:
+            account_id = getattr(statement, "accountId", "UNKNOWN")
+            if hasattr(statement, "OptionEAE"):
+                for eae in statement.OptionEAE:
+                    eae_records.append(
+                        OptionEAECreate(
+                            account_id=account_id,
+                            currency=eae.currency,
+                            fx_rate_to_base=Decimal(str(eae.fxRateToBase)),
+                            symbol=eae.symbol,
+                            underlying_symbol=eae.underlyingSymbol,
+                            strike=Decimal(str(eae.strike)),
+                            expiry=eae.expiry,
+                            put_call=self._get_val(eae.putCall),
+                            date=eae.date,
+                            transaction_type=self._get_val(eae.transactionType).capitalize(),
+                            quantity=Decimal(str(eae.quantity)),
+                            trade_price=Decimal(str(eae.tradePrice)),
+                            multiplier=Decimal(str(eae.multiplier)),
+                            trade_id=str(eae.tradeID) if hasattr(eae, "tradeID") and eae.tradeID else None
+                        )
+                    )
+        return eae_records
+
     def parse_all(self):
         return {
             "accounts": self.get_accounts(),
             "trades": self.get_trades(),
             "cash_transactions": self.get_cash_transactions(),
+            "option_eae": self.get_option_eae(),
         }

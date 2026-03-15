@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema
+from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, OptionEAECreate
 
 
 class CSVActivityParser:
@@ -135,9 +135,38 @@ class CSVActivityParser:
                     )
         return transactions
 
+    def get_option_eae(self) -> List[OptionEAECreate]:
+        eae_records = []
+        # Normalizing section name - IBKR CSV usually uses this long name
+        section_name = "Options Exercise, Assignment and Expiration"
+        if section_name in self.sections:
+            for row in self.sections[section_name]:
+                # In CSV, we often have 'Total' rows, skip them
+                if row.get("Symbol"):
+                    eae_records.append(
+                        OptionEAECreate(
+                            account_id=row.get("Account ID", "UNKNOWN"),
+                            currency=row.get("Currency", "USD"),
+                            fx_rate_to_base=Decimal(row.get("FX Rate To Base", "1")),
+                            symbol=row.get("Symbol", ""),
+                            underlying_symbol=row.get("Underlying Symbol", ""),
+                            strike=Decimal(row.get("Strike", "0").replace(",", "")),
+                            expiry=row.get("Expiry"),
+                            put_call=row.get("Put/Call", "C")[0].upper(), # Ensure 'P' or 'C'
+                            date=row.get("Date"),
+                            transaction_type=row.get("Type", "").capitalize(),
+                            quantity=Decimal(row.get("Quantity", "0").replace(",", "")),
+                            trade_price=Decimal(row.get("Trade Price", "0").replace(",", "")),
+                            multiplier=Decimal(row.get("Multiplier", "100").replace(",", "")),
+                            trade_id=row.get("Trade ID")
+                        )
+                    )
+        return eae_records
+
     def parse_all(self) -> Dict[str, Any]:
         return {
             "accounts": self.get_accounts(),
             "trades": self.get_trades(),
             "cash_transactions": self.get_cash_transactions(),
+            "option_eae": self.get_option_eae(),
         }

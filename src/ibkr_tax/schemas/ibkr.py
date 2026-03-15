@@ -100,3 +100,20 @@ class CashTransactionSchema(BaseIBKRSchema):
         data["settle_date"] = self.settle_date.isoformat()
         data["report_date"] = self.report_date.isoformat()
         return data
+
+
+class OptionEAECreate(BaseIBKRSchema):
+    account_id: str = Field(..., min_length=1)
+    currency: str = Field(..., max_length=3)
+    fx_rate_to_base: Decimal = Field(..., gt=0)
+    symbol: str = Field(..., min_length=1)
+    underlying_symbol: str = Field(..., min_length=1)
+    strike: Decimal = Field(..., ge=0)
+    expiry: date
+    put_call: Literal["P", "C"]
+    date: date
+    transaction_type: Literal["Exercise", "Assignment", "Expiration"]
+    quantity: Decimal = Field(...)
+    trade_price: Decimal = Field(default=Decimal("0"))
+    multiplier: Decimal = Field(default=Decimal("100"))
+    trade_id: str | None = None
