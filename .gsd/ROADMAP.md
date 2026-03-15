@@ -26,7 +26,7 @@
 **Objective**: Build strict, typed data validation for raw IBKR inputs before database insertion.
 
 ### Phase 3: ECB Exchange Rates
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Exchange calculation engine referencing official ECB rates with weekend fallback (cacheable in DB).
 
 ### Phase 4: IBKR Flex Query XML Parser
