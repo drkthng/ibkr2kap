@@ -54,7 +54,7 @@
 **Objective**: Handle complex but crucial mechanisms around options: expirations, assignments, and exercises modifying stock basic costs.
 
 ### Phase 10: Corporate Actions
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Handle standard Stock Splits (changing quantities but maintaining cost basis).
 
 ### Phase 11: Excel Export

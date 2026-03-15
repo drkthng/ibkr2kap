@@ -1,15 +1,15 @@
 # STATE.md
 
-> **Current Phase**: 9 (completed)
+> **Current Phase**: 10 (completed)
 > **Last Updated**: 2026-03-15
 
 ## Current Position
-- **Phase**: 9 (completed)
+- **Phase**: 10 (completed)
 - **Task**: All tasks complete
 - **Status**: Verified
 
 ## Last Session Summary
-Phase 9 executed successfully. Implemented `OptionEngine` to handle expirations, exercises, and assignments. Enhanced `FIFOEngine` with support for short positions (opening sells). Verified all scenarios with comprehensive unit tests.
+Phase 10 executed successfully. Implemented `CorporateActionEngine` to handle stock splits (forward/reverse). Modified `FIFOLot` quantities while preserving historical cost basis. Fixed Pydantic V2 migration issue in `TaxReport` schema. Verified with 7 new unit tests and full-suite regression test.
 
 ## Next Steps
-1. Proceed to Phase 10: Corporate Actions
+1. Proceed to Phase 11: Excel Export
