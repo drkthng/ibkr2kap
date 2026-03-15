@@ -1,17 +1,15 @@
 # STATE.md
 
-> **Current Phase**: 14
+> **Current Position**: Milestone v1.0 Complete
 > **Last Updated**: 2026-03-15
 
 ## Current Position
-- **Phase**: 14
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Status**: Milestone v1.0 Finalized and Tagged
+- **Next Step**: Start new milestone or maintain v1.0
 
 ## Last Session Summary
-Phase 13 executed successfully. Implemented a comprehensive multi-year e2e test in `tests/test_e2e.py`. Refactored FIFO engine for bidirectional matching and interleaved corporate actions.
-
-Phase 14 executed successfully. Implemented a dedicated FX FIFO engine for § 23 EStG compliance, introduced new database models, and updated the Excel export to report taxable currency gains.
+Successfully completed IBKR2KAP v1.0. All 15 phases (0-14) implemented, verified, and archived. Final documentation and § 23 EStG support added.
 
 ## Next Steps
-1. /complete-milestone or refine documentation.
+1. /new-milestone — Plan the next set of features.
+2. Monitor user feedback on v1.0.

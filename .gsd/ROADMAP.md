@@ -1,9 +1,9 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 13 complete
-> **Milestone**: v1.0
+> **Current Milestone**: v1.0 complete
+> **Next Milestone**: v2.0 - TBD
 
-## Must-Haves (from SPEC)
+## Must-Haves (v1.0)
 - [x] Python 3.12 Environment setup with Database.
 - [x] Parse Flex Query XML correctly.
 - [x] Validated data correctly persistent in SQLite.
@@ -11,64 +11,12 @@
 - [x] Tax categorization engine for mapping to "Anlage KAP".
 - [x] Tax Consultant Excel Report Export.
 - [x] Local Streamlit UI for the end-user.
+- [x] Currency Gains (§ 23 EStG) compliance.
 
-## Phases
+## Milestone v1.0 (Archived)
+All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` for details.
 
-### Phase 0: Project Setup
-**Status**: ✅ Complete
-**Objective**: Basic project scaffolding, Poetry/uv configuration, SQLite + SQLAlchemy setup, and a "Hello World" test.
-
-### Phase 1: Database Models
-**Status**: ✅ Complete
-**Objective**: Map strict SQLAlchemy 2.0 ORM models (Account, Trade, CashTransaction, FIFOLot, Gain) representing the full IBKR data structure and tax matching logic.
-
-### Phase 2: Pydantic Validation Schemas
-**Status**: ✅ Complete
-**Objective**: Build strict, typed data validation for raw IBKR inputs before database insertion.
-
-### Phase 3: ECB Exchange Rates
-**Status**: ✅ Complete
-**Objective**: Exchange calculation engine referencing official ECB rates with weekend fallback (cacheable in DB).
-
-### Phase 4: IBKR Flex Query XML Parser
-**Status**: ✅ Complete
-**Objective**: Ingest the reliable XML structure using `ibflex` and map the raw structures to our Pydantic validation schemas.
-
-### Phase 5: IBKR CSV Activity Statement Parser (Fallback)
-**Status**: ✅ Complete
-**Objective**: Fallback parser handling IBKR's specific Section/Header/Data CSV formats.
-
-### Phase 6: Data Import Pipeline
-**Status**: ✅ Complete
-**Objective**: Write validated external data correctly to the SQLite database via repository patterns, ensuring idempotency and duplication prevention.
-
-### Phase 7: FIFO Engine
-**Status**: ✅ Complete
-
-### Phase 8: Tax Categorization
-**Status**: ✅ Complete
-**Objective**: Allocate realized gains to German tax pools (Aktienverlusttopf vs. Allgemeiner Topf) mapping cleanly to Anlage KAP columns.
-
-### Phase 9: Options Edge Cases
-**Status**: ✅ Complete
-**Objective**: Handle complex but crucial mechanisms around options: expirations, assignments, and exercises modifying stock basic costs.
-
-### Phase 10: Corporate Actions
-**Status**: ✅ Complete
-**Objective**: Handle standard Stock Splits (changing quantities but maintaining cost basis).
-
-### Phase 11: Excel Export
-**Status**: ✅ Complete
-**Objective**: Use `openpyxl` to produce elegantly formatted reports designed specifically for tax consultants.
-
-### Phase 12: Streamlit UI
-**Status**: ✅ Complete
-**Objective**: Frontend experience providing data import capabilities, execution of tax routines, and viewing of individual lot deductions.
-
-### Phase 13: End-to-End Integration
-**Status**: ✅ Complete
-**Objective**: Connect all units with an overarching realistic, multi-year e2e test scenario evaluating full correctness.
-
-### Phase 14: Currency Gains (Optional)
-**Status**: ✅ Complete
-**Objective**: Address §23 EStG on foreign currency holdings matching. Implemented FX FIFO engine for taxable FX gains.
+## Next Milestone: v2.0 (Planning)
+- [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
+- [ ] Advanced corporate action support (Spinoffs, Mergers).
+- [ ] Portfolio analytics and dividend forecasting.
