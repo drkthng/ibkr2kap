@@ -34,7 +34,7 @@
 **Objective**: Ingest the reliable XML structure using `ibflex` and map the raw structures to our Pydantic validation schemas.
 
 ### Phase 5: IBKR CSV Activity Statement Parser (Fallback)
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Fallback parser handling IBKR's specific Section/Header/Data CSV formats.
 
 ### Phase 6: Data Import Pipeline
