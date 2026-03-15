@@ -30,7 +30,7 @@
 **Objective**: Exchange calculation engine referencing official ECB rates with weekend fallback (cacheable in DB).
 
 ### Phase 4: IBKR Flex Query XML Parser
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Ingest the reliable XML structure using `ibflex` and map the raw structures to our Pydantic validation schemas.
 
 ### Phase 5: IBKR CSV Activity Statement Parser (Fallback)
