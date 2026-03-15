@@ -66,7 +66,7 @@ class Gain(Base):
     __tablename__ = "gains"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    sell_trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id"))
+    sell_trade_id: Mapped[int | None] = mapped_column(ForeignKey("trades.id"), nullable=True)
     buy_lot_id: Mapped[int] = mapped_column(ForeignKey("fifo_lots.id"))
     quantity_matched: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     tax_year: Mapped[int] = mapped_column(index=True)

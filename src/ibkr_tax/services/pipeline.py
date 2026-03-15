@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from ibkr_tax.services.flex_parser import FlexXMLParser
 from ibkr_tax.services.csv_parser import CSVActivityParser
+from ibkr_tax.services.option_engine import OptionEngine
 from ibkr_tax.db.repository import import_accounts, import_trades, import_cash_transactions
 
 
@@ -31,6 +32,12 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
     accounts = parsed_data["accounts"]
     trades = parsed_data["trades"]
     cash_txs = parsed_data["cash_transactions"]
+    option_eae = parsed_data.get("option_eae", [])
+
+    # Process Option Edge Cases (Adjusts transient 'trades' list and closes option lots in DB)
+    if option_eae:
+        opt_engine = OptionEngine(session)
+        opt_engine.apply_option_adjustments(option_eae, trades)
 
     # Insert into database using repository functions
     # Order matters: Accounts must come first due to foreign key constraints
@@ -54,6 +61,9 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
             "cash_transactions": {
                 "parsed": len(cash_txs),
                 "inserted": cash_txs_count
+            },
+            "option_eae": {
+                "parsed": len(option_eae)
             }
         }
     }
