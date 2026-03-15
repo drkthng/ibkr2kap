@@ -50,7 +50,7 @@
 **Objective**: Allocate realized gains to German tax pools (Aktienverlusttopf vs. Allgemeiner Topf) mapping cleanly to Anlage KAP columns.
 
 ### Phase 9: Options Edge Cases
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Handle complex but crucial mechanisms around options: expirations, assignments, and exercises modifying stock basic costs.
 
 ### Phase 10: Corporate Actions
