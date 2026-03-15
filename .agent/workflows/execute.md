@@ -74,6 +74,8 @@ grep "Phase $PHASE:" ".gsd/ROADMAP.md"
 
 ---
 
+---
+
 ## 3. Ensure Phase Directory Exists
 
 **PowerShell:**
@@ -92,21 +94,32 @@ mkdir -p "$PHASE_DIR"
 
 ---
 
-## 3.5. Ensure Phase Branch
+## 4. Ensure Phase Branch (MANDATORY)
+
+**STOP CONDITION: If this step fails, DO NOT PROCEED.**
 
 **PowerShell:**
 ```powershell
 git checkout "phase-$PHASE"
+$current_branch = git branch --show-current
+if ($current_branch -ne "phase-$PHASE") {
+    Write-Error "FATAL: Failed to switch to branch phase-$PHASE. Current branch: $current_branch"
+    exit
+}
 ```
 
 **Bash:**
 ```bash
 git checkout "phase-$PHASE"
+if [ "$(git branch --show-current)" != "phase-$PHASE" ]; then
+    echo "FATAL: Failed to switch to branch phase-$PHASE" >&2
+    exit 1
+fi
 ```
 
 ---
 
-## 4. Discover Plans
+## 5. Discover Plans
 
 **PowerShell:**
 ```powershell
@@ -178,6 +191,12 @@ For each plan in the current wave:
 3. **Verify each task** — Run `<verify>` commands
 4. **Commit per task:**
    ```bash
+   # Pre-commit branch guard
+   branch=$(git branch --show-current)
+   if [ "$branch" == "main" ]; then
+       echo "FATAL: Committing to main is forbidden. Run: git checkout -b phase-{N}" >&2
+       exit 1
+   fi
    git add -A
    git commit -m "feat(phase-{N}): {task-name}"
    ```

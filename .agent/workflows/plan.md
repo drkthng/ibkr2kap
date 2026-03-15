@@ -155,7 +155,9 @@ grep "Phase $PHASE:" ".gsd/ROADMAP.md"
 
 ---
 
-## 4. Ensure Phase Directory
+---
+
+## 3. Ensure Phase Directory
 
 **PowerShell:**
 ```powershell
@@ -173,7 +175,9 @@ mkdir -p "$PHASE_DIR"
 
 ---
 
-## 4.5. Ensure Phase Branch
+## 4. Ensure Phase Branch (MANDATORY)
+
+**STOP CONDITION: If this step fails, DO NOT PROCEED.**
 
 **PowerShell:**
 ```powershell
@@ -181,11 +185,20 @@ git checkout "phase-$PHASE" 2>$null
 if ($LASTEXITCODE -ne 0) {
     git checkout -b "phase-$PHASE"
 }
+$current_branch = git branch --show-current
+if ($current_branch -ne "phase-$PHASE") {
+    Write-Error "FATAL: Failed to switch to branch phase-$PHASE. Current branch: $current_branch"
+    exit
+}
 ```
 
 **Bash:**
 ```bash
 git checkout "phase-$PHASE" 2>/dev/null || git checkout -b "phase-$PHASE"
+if [ "$(git branch --show-current)" != "phase-$PHASE" ]; then
+    echo "FATAL: Failed to switch to branch phase-$PHASE" >&2
+    exit 1
+fi
 ```
 
 ---
@@ -308,7 +321,19 @@ For each plan, verify:
 
 ---
 
-## 8. Update State
+## 8. Update State (MANDATORY)
+
+**PowerShell:**
+```powershell
+# Pre-commit branch guard
+$branch = git branch --show-current
+if ($branch -eq "main") {
+    Write-Error "FATAL: Committing to main is forbidden. Run: git checkout -b phase-$PHASE"
+    exit
+}
+```
+
+Update `.gsd/STATE.md`:
 
 Update `.gsd/STATE.md`:
 ```markdown

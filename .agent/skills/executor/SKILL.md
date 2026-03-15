@@ -34,10 +34,23 @@ Get-Content ".gsd/STATE.md" -ErrorAction SilentlyContinue
 
 **If .gsd/ doesn't exist:** Error — project not initialized.
 
-> [!IMPORTANT]
-> **Branching Rule**: Before executing tasks, ensure you are on the `phase-{phase}` branch by running `git checkout phase-{phase}`. Do not commit to `main`.
+### Step 2: Ensure Phase Branch (MANDATORY)
 
-### Step 2: Load Plan
+Before executing tasks, you MUST ensure you are on the `phase-{phase}` branch.
+
+```powershell
+git checkout phase-{phase}
+# VERIFY branch
+$branch = git branch --show-current
+if ($branch -ne "phase-{phase}") {
+    Write-Error "FATAL: Failed to switch to branch phase-{phase}"
+    exit
+}
+```
+
+Do not commit to `main`. If you find yourself on `main`, STOP and switch branches.
+
+### Step 3: Load Plan
 
 Read the plan file provided in your prompt context.
 

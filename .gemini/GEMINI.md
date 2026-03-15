@@ -20,7 +20,8 @@ This file provides Gemini-specific integration. For the complete methodology, se
 2. **State Is Sacred** — Every action updates persistent memory
 3. **Context Is Limited** — Prevent degradation through hygiene
 4. **Verify Empirically** — No "trust me, it works"
-5. **Phase-Specific Branching** — Always create and work on a branch named `phase-{N}` for any phase-specific work. Never commit directly to `main`.
+5. **Phase-Specific Branching (PROCEDURAL STOP)** — Always create and work on a branch named `phase-{N}` for any phase-specific work via the mandatory numbered steps in `/plan` and `/execute`. Committing directly to `main` will trigger a fatal STOP in the commit guard.
+
 
 ---
 

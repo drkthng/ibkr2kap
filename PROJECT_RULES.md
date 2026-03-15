@@ -18,7 +18,7 @@
 
 **Planning Lock**: No implementation code until SPEC.md contains "Status: FINALIZED".
 
-**Phase-Specific Branching**: Always create and work on a branch named `phase-{N}` for any phase-specific work. Never commit directly to `main`.
+**Phase-Specific Branching (PROCEDURAL STOP)**: Always create and work on a branch named `phase-{N}` for any phase-specific work. This is enforced via mandatory numbered steps in the workflow and pre-commit guards. Never commit directly to `main`.
 
 ---
 
