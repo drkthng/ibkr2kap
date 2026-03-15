@@ -38,7 +38,7 @@ class Trade(Base):
     taxes: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
     ib_commission: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
     buy_sell: Mapped[str] = mapped_column()
-    open_close_indicator: Mapped[str] = mapped_column()
+    open_close_indicator: Mapped[str] = mapped_column(nullable=True)
 
     account: Mapped["Account"] = relationship(back_populates="trades")
     fifo_lots: Mapped[List["FIFOLot"]] = relationship(back_populates="trade")
