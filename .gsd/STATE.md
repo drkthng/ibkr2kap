@@ -1,15 +1,15 @@
 # STATE.md
 
-> **Current Phase**: 3 (completed)
-> **Last Updated**: 2026-03-14
+> **Current Phase**: 4 (planning complete)
+> **Last Updated**: 2026-03-15
 
 ## Current Position
-- **Phase**: 3 — ECB Exchange Rates (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Phase**: 4
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Phase 3 executed successfully. Implemented ExchangeRate model, ECBRateFetcher service, and get_rate() API with 7-day walkback for weekends/holidays. Verified with 12 passing tests (9 new, 3 existing).
+Phase 4 parsed and planned: FlexXMLParser service has been outlined in 4-1-PLAN.md to utilize `ibflex` for converting XML flex statements to our Pydantic schemas.
 
 ## Next Steps
-1. Proceed to Phase 4: IBKR Flex Query XML Parser
+1. /execute 4
