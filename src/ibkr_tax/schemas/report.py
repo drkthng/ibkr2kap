@@ -1,10 +1,12 @@
 from decimal import Decimal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class TaxReport(BaseModel):
     """
     TaxReport schema representing aggregated values for German Anlage KAP.
     """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     account_id: str
     tax_year: int
     
@@ -25,6 +27,3 @@ class TaxReport(BaseModel):
     
     # Summary Field
     total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
-
-    class Config:
-        arbitrary_types_allowed = True
