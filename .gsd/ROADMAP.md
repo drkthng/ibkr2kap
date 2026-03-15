@@ -1,11 +1,12 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 1 complete
+> **Current Phase**: Phase 6 complete
 > **Milestone**: v1.0
 
 ## Must-Haves (from SPEC)
 - [ ] Python 3.12 Environment setup with Database.
 - [ ] Parse Flex Query XML correctly.
+- [x] Validated data correctly persistent in SQLite.
 - [ ] Tax compliant FIFO engine for accurately matching lots based on settlement dates.
 - [ ] Tax categorization engine for mapping to "Anlage KAP".
 - [ ] Tax Consultant Excel Report Export.
@@ -38,7 +39,7 @@
 **Objective**: Fallback parser handling IBKR's specific Section/Header/Data CSV formats.
 
 ### Phase 6: Data Import Pipeline
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Write validated external data correctly to the SQLite database via repository patterns, ensuring idempotency and duplication prevention.
 
 ### Phase 7: FIFO Engine
