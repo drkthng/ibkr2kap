@@ -1,15 +1,15 @@
 # STATE.md
 
-> **Current Phase**: 4 (completed)
+> **Current Phase**: 5
 > **Last Updated**: 2026-03-15
 
 ## Current Position
-- **Phase**: 4 — IBKR Flex Query XML Parser (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Phase**: 5
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Phase 4 executed successfully. Implemented FlexXMLParser service with robust support for ibflex 0.15, including XML preprocessing to handle new IBKR fields and actionID extraction. Verified with comprehensive unit tests.
+Planned Phase 5: IBKR CSV Activity Statement Parser (Fallback). Researched multi-section CSV structure and created Plan 5.1 for `CSVActivityParser` implementation mimicking the XML parser.
 
 ## Next Steps
-1. Proceed to Phase 5: IBKR CSV Activity Statement Parser (Fallback)
+1. /execute 5
