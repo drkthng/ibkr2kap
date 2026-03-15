@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 6 complete
+> **Current Phase**: Phase 8 complete
 > **Milestone**: v1.0
 
 ## Must-Haves (from SPEC)
@@ -46,7 +46,7 @@
 **Status**: ✅ Complete
 
 ### Phase 8: Tax Categorization
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Allocate realized gains to German tax pools (Aktienverlusttopf vs. Allgemeiner Topf) mapping cleanly to Anlage KAP columns.
 
 ### Phase 9: Options Edge Cases
