@@ -94,10 +94,8 @@ class FIFOEngine:
             quantity_to_match -= matched_qty
             
         if quantity_to_match > 0:
-            # This is technically a "Short" or we are missing history.
-            # In a simplified FIFO app, we might handle this as a warning or a special case.
-            # For now, let's just log it or leave it unmatched.
-            pass
+            # This is a "Short" opening. Create a FIFOLot with negative quantity.
+            self._add_to_inventory(trade)
         
         self.session.flush()
 

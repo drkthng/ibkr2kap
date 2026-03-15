@@ -36,25 +36,23 @@ class OptionEngine:
         if not lot:
             return
 
-        # Realize full remaining cost as loss (if long) or gain (if short)
-        # Note: In Termingeschäfte, we realize the premium.
-        # If it was a BUY (long), remaining_quantity > 0, cost_basis_total is POSITIVE. 
-        # Expiration means we got 0 proceeds. PnL = 0 - cost_basis_total = -cost_basis_total.
+        # For long lots (remaining_quantity > 0), cost_basis_total is positive cost.
+        # Expiration at 0 proceeds -> PnL = 0 - cost_basis_total = -cost_basis_total.
+        # For short lots (remaining_quantity < 0), cost_basis_total is positive premium received.
+        # Expiration at 0 -> PnL = cost_basis_total.
         
-        # We need a dummy "sell_trade_id" or allow null. 
-        # Current Gain model requires sell_trade_id. 
-        # This is a bit of a gap. I might need a dummy trade or just handle it differently.
-        # For now, let's assume we create a minimal Gain record.
-        # Actually, let's check the Gain model again.
+        pnl = -lot.cost_basis_total
+        if lot.remaining_quantity < 0:
+            pnl = lot.cost_basis_total
         
         gain = Gain(
-            sell_trade_id=None,  # Need to make this nullable in database.py if it isn't
+            sell_trade_id=None,
             buy_lot_id=lot.id,
             quantity_matched=lot.remaining_quantity,
             tax_year=eae.date.year,
             proceeds=Decimal("0"),
             cost_basis_matched=lot.cost_basis_total,
-            realized_pnl=-lot.cost_basis_total,
+            realized_pnl=pnl,
             tax_pool="Termingeschäfte"
         )
         self.session.add(gain)
@@ -89,25 +87,23 @@ class OptionEngine:
         # Transfer cost basis
         # If we were Long the option (cost_basis_total > 0):
         #   - Exercise Call: Adding premium to stock cost. (Stock quantity > 0, proceeds < 0)
-        #     Adjustment: proceeds -= eae_cost_basis_in_currency
+        #     Adjustment: proceeds -= eae_cost_basis_in_currency (-15000 - 500 = -15500)
         #   - Exercise Put: Deducting premium from proceeds. (Stock quantity < 0, proceeds > 0)
-        #     Adjustment: proceeds -= eae_cost_basis_in_currency
+        #     Adjustment: proceeds -= eae_cost_basis_in_currency (15000 - 500 = 14500)
+        
+        # If we were Short the option (cost_basis_total > 0, but it was premium RECEIVED):
+        #   - Assign Call: Adding premium received to stock proceeds. (Stock quantity < 0, proceeds > 0)
+        #     Adjustment: proceeds += eae_cost_basis_in_currency (15000 + 500 = 15500)
+        #   - Assign Put: Deducting premium received from stock cost. (Stock quantity > 0, proceeds < 0)
+        #     Adjustment: proceeds += eae_cost_basis_in_currency (-15000 + 500 = -14500)
         
         # Option premium in currency
         premium_in_currency = lot.cost_basis_total / eae.fx_rate_to_base
         
-        # Proceed adjustment: 
-        # IBKR 'proceeds' is (price * qty). For BUY it's negative.
-        # We want to increase the absolute cost or decrease the absolute proceeds.
-        # Actually, standard formula: 
-        # Cost Basis = (Strike * Qty) + Premium
-        # Proceeds = (Strike * Qty) - Premium
-        
-        # In our TradeSchema, 'proceeds' includes commission/taxes? 
-        # Actually standard IBKR proceeds is just Price * Qty.
-        
-        # If we just adjust target_trade.proceeds, the FIFO engine will use it.
-        target_trade.proceeds -= premium_in_currency  # Works for both Buy and Sell?
+        if lot.remaining_quantity < 0:
+            target_trade.proceeds += premium_in_currency
+        else:
+            target_trade.proceeds -= premium_in_currency
         # Let's verify:
         # Buy Stock (Exercise Call): Strike=100, Qty=1. Proceeds = -100. Premium = 5. New Proceeds = -105. Correct.
         # Sell Stock (Exercise Put): Strike=100, Qty=-1. Proceeds = 100. Premium = 5. New Proceeds = 95. Correct.
@@ -123,7 +119,7 @@ class OptionEngine:
             select(FIFOLot)
             .where(FIFOLot.symbol == eae.symbol)
             .where(FIFOLot.asset_category == "OPT")
-            .where(FIFOLot.remaining_quantity > 0)
+            .where(FIFOLot.remaining_quantity != 0)
             .order_by(asc(FIFOLot.settle_date))
         )
         return self.session.execute(stmt).scalars().first()
