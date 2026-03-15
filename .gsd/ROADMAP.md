@@ -35,6 +35,10 @@ All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` fo
 **Status**: ⬜ Not Started
 **Objective**: Modify the "Anlage KAP Report" page to fetch distinct Account IDs from the database for the dropdown, and cascade the "Tax Year" dropdown based on the available data for the selected Account ID.
 
+### Phase 18: Buy-Date Reporting for Gains/Losses
+**Status**: ⬜ Not Started
+**Objective**: Update the final tax report generation to not only show the sell date for stock and currency gains/losses, but also include the original buy-date of the underlying position.
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Advanced corporate action support (Spinoffs, Mergers).

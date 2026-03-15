@@ -12,5 +12,5 @@ Successfully completed IBKR2KAP v1.0. All 15 phases (0-14) implemented, verified
 
 ## Next Steps
 1. Execute `/plan 15` to create execution plans for Phase 15.
-2. Execute `/plan 16` and `/plan 17`.
+2. Execute `/plan 16`, `/plan 17`, and `/plan 18`.
 3. Proceed with `/execute` for the planned phases.
