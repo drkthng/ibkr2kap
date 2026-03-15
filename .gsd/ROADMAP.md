@@ -43,8 +43,7 @@
 **Objective**: Write validated external data correctly to the SQLite database via repository patterns, ensuring idempotency and duplication prevention.
 
 ### Phase 7: FIFO Engine
-**Status**: ⬜ Not Started
-**Objective**: The absolute core of the app: chronological matching of BUY and SELL lots matching the strict German FIFO laws across tax years.
+**Status**: ✅ Complete
 
 ### Phase 8: Tax Categorization
 **Status**: ⬜ Not Started
