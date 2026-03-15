@@ -153,3 +153,45 @@ def test_gains_detail_sorted_by_date(db_session, tmp_path):
     # Should be sorted: 2024-01-03 then 2024-12-03
     assert dates[0] == "2024-01-03"
     assert dates[1] == "2024-12-03"
+
+def test_fx_gains_sheet_export(db_session, tmp_path):
+    # 1. Setup Data
+    acc = Account(account_id="U_FX_EXPORT_TEST")
+    db_session.add(acc)
+    db_session.commit()
+    
+    from ibkr_tax.models.database import FXFIFOLot, FXGain
+    lot = FXFIFOLot(
+        account_id=acc.id, currency="USD", acquisition_date="2024-01-01",
+        original_amount=Decimal("1000"), remaining_amount=Decimal("0"),
+        cost_basis_total_eur=Decimal("900"), cost_basis_per_unit_eur=Decimal("0.9")
+    )
+    db_session.add(lot)
+    db_session.commit()
+    
+    gain = FXGain(
+        account_id=acc.id, fx_lot_id=lot.id, disposal_date="2024-02-01",
+        amount_matched=Decimal("1000"), disposal_proceeds_eur=Decimal("950"),
+        cost_basis_matched_eur=Decimal("900"), realized_pnl_eur=Decimal("50"),
+        days_held=31, is_taxable_section_23=True
+    )
+    db_session.add(gain)
+    db_session.commit()
+    
+    # 2. Export
+    report = TaxReport(account_id="U_FX_EXPORT_TEST", tax_year=2024)
+    output_file = str(tmp_path / "fx_export_test.xlsx")
+    
+    service = ExcelExportService(db_session)
+    service.export(report, output_file)
+    
+    # 3. Verify
+    wb = load_workbook(output_file)
+    assert "Währungsgewinne (§ 23 EStG)" in wb.sheetnames
+    ws = wb["Währungsgewinne (§ 23 EStG)"]
+    
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    assert len(rows) == 1
+    assert rows[0][0] == "2024-02-01" # Disposal Date
+    assert rows[0][1] == "USD" # Currency
+    assert rows[0][8] == "JA" # Taxable?

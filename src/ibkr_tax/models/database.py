@@ -18,6 +18,8 @@ class Account(Base):
     trades: Mapped[List["Trade"]] = relationship(back_populates="account")
     cash_transactions: Mapped[List["CashTransaction"]] = relationship(back_populates="account")
     corporate_actions: Mapped[List["CorporateAction"]] = relationship(back_populates="account")
+    fx_fifo_lots: Mapped[List["FXFIFOLot"]] = relationship(back_populates="account")
+    fx_gains: Mapped[List["FXGain"]] = relationship(back_populates="account")
 
 class Trade(Base):
     """Trade model tracking transactional data."""
@@ -111,6 +113,43 @@ class CashTransaction(Base):
     report_date: Mapped[str] = mapped_column()
 
     account: Mapped["Account"] = relationship(back_populates="cash_transactions")
+
+class FXFIFOLot(Base):
+    """FXFIFOLot model tracking open units of foreign currency for FIFO matching."""
+    __tablename__ = "fx_fifo_lots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    currency: Mapped[str] = mapped_column(index=True)
+    acquisition_date: Mapped[str] = mapped_column(index=True)
+    original_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    remaining_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    cost_basis_total_eur: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    cost_basis_per_unit_eur: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+
+    # Optional tracing
+    trade_id: Mapped[int | None] = mapped_column(ForeignKey("trades.id"), nullable=True)
+    cash_transaction_id: Mapped[int | None] = mapped_column(ForeignKey("cash_transactions.id"), nullable=True)
+
+    account: Mapped["Account"] = relationship(back_populates="fx_fifo_lots")
+
+class FXGain(Base):
+    """FXGain model tracking realized FX PnL under § 23 EStG."""
+    __tablename__ = "fx_gains"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    fx_lot_id: Mapped[int] = mapped_column(ForeignKey("fx_fifo_lots.id"))
+    disposal_date: Mapped[str] = mapped_column(index=True)
+    amount_matched: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    disposal_proceeds_eur: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    cost_basis_matched_eur: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    realized_pnl_eur: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    days_held: Mapped[int] = mapped_column()
+    is_taxable_section_23: Mapped[bool] = mapped_column(default=False)
+
+    account: Mapped["Account"] = relationship(back_populates="fx_gains")
+    fx_lot: Mapped["FXFIFOLot"] = relationship()
 
 class ExchangeRate(Base):
     """ExchangeRate model caching ECB reference rates."""

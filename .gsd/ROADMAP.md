@@ -70,5 +70,5 @@
 **Objective**: Connect all units with an overarching realistic, multi-year e2e test scenario evaluating full correctness.
 
 ### Phase 14: Currency Gains (Optional)
-**Status**: ⬜ Not Started
-**Objective**: (Extremely Complex) Address §23 EStG on foreign currency holdings matching. Marked as highly optional.
+**Status**: ✅ Complete
+**Objective**: Address §23 EStG on foreign currency holdings matching. Implemented FX FIFO engine for taxable FX gains.

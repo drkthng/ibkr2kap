@@ -4,7 +4,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from ibkr_tax.schemas.report import TaxReport
-from ibkr_tax.models.database import Gain, Trade
+from ibkr_tax.models.database import Gain, Trade, FXGain, FXFIFOLot
 
 class ExcelExportService:
     def __init__(self, session: Session):
@@ -120,5 +120,56 @@ class ExcelExportService:
         # Auto-width for detail sheet columns (rough estimate)
         for col in ["A", "B", "C", "D", "E", "F", "G"]:
             detail_sheet.column_dimensions[col].width = 15
+
+        # --- Sheet 3: FX Gains Detail (§ 23 EStG) ---
+        fx_sheet = wb.create_sheet("Währungsgewinne (§ 23 EStG)")
+        
+        fx_headers = [
+            "Datum Dispo", "Währung", "Ansch. Datum", "Haltedauer (Tage)", "Betrag",
+            "Erlös (EUR)", "Kosten (EUR)", "Gewinn/Verlust (EUR)", "Steuerrelevant (§23)?"
+        ]
+        for col_idx, header in enumerate(fx_headers, 1):
+            cell = fx_sheet.cell(row=1, column=col_idx)
+            cell.value = header
+            cell.font = bold_font
+            cell.fill = header_fill
+            
+        stmt_fx = (
+            select(FXGain)
+            .join(Account, FXGain.account_id == Account.id)
+            .where(Account.account_id == report.account_id)
+            .where(FXGain.disposal_date.like(f"{report.tax_year}%"))
+            .order_by(FXGain.disposal_date.asc())
+        )
+        fx_gains = self.session.execute(stmt_fx).scalars().all()
+        
+        for r_idx, g in enumerate(fx_gains, 2):
+            fx_sheet.cell(row=r_idx, column=1).value = g.disposal_date
+            fx_sheet.cell(row=r_idx, column=2).value = g.fx_lot.currency
+            fx_sheet.cell(row=r_idx, column=3).value = g.fx_lot.acquisition_date
+            fx_sheet.cell(row=r_idx, column=4).value = g.days_held
+            
+            amt_cell = fx_sheet.cell(row=r_idx, column=5)
+            amt_cell.value = g.amount_matched
+            amt_cell.number_format = qty_format
+            
+            p_cell = fx_sheet.cell(row=r_idx, column=6)
+            p_cell.value = g.disposal_proceeds_eur
+            p_cell.number_format = euro_format
+            
+            c_cell = fx_sheet.cell(row=r_idx, column=7)
+            c_cell.value = g.cost_basis_matched_eur
+            c_cell.number_format = euro_format
+            
+            gn_cell = fx_sheet.cell(row=r_idx, column=8)
+            gn_cell.value = g.realized_pnl_eur
+            gn_cell.number_format = euro_format
+            
+            tax_cell = fx_sheet.cell(row=r_idx, column=9)
+            tax_cell.value = "JA" if g.is_taxable_section_23 else "NEIN"
+            
+        fx_sheet.freeze_panes = "A2"
+        for col in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
+            fx_sheet.column_dimensions[col].width = 15
 
         wb.save(output_path)

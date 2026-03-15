@@ -64,6 +64,17 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
         # Standard run if no options
         fifo_runner.run_all()
 
+    # 3. Process FX FIFO for Section 23 EStG (§ 23 EStG)
+    from ibkr_tax.services.fx_fifo_engine import FXFIFOEngine
+    from ibkr_tax.models.database import Account
+    from sqlalchemy import select
+    fx_engine = FXFIFOEngine(session)
+    # We process for all accounts to be safe, as cash transfers can be between accounts
+    accounts_in_db = session.execute(select(Account)).scalars().all()
+    for acc in accounts_in_db:
+        fx_engine.process_all_fx(acc.id)
+    session.commit()
+
     return {
         "status": "success",
         "file_path": file_path,
