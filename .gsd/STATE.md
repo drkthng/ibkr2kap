@@ -4,13 +4,12 @@
 > **Last Updated**: 2026-03-15
 
 ## Current Position
-- **Status**: Milestone v1.1 Planned
-- **Next Step**: `/plan 15` (Phase 15: XML Ingestion Error Reporting)
+- **Phase**: 15
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Successfully completed IBKR2KAP v1.0. All 15 phases (0-14) implemented, verified, and archived. Final documentation and § 23 EStG support added. Planned Milestone v1.1 for UI and ingestion improvements.
+Successfully completed IBKR2KAP v1.0. Planned Milestone v1.1. Added Phase 18 and 19 per user requests. Planned Phase 15.
 
 ## Next Steps
-1. Execute `/plan 15` to create execution plans for Phase 15.
-2. Execute `/plan 16` through `/plan 19` for the subsequent phases.
-3. Proceed with `/execute` for the planned phases.
+1. `/execute 15` — run Phase 15 plans.
