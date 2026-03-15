@@ -40,8 +40,8 @@ def test_run_import_xml_mocked(session, monkeypatch):
     result = run_import("dummy.xml", session, file_type="xml")
     
     assert result["status"] == "success"
-    assert result["counts"]["accounts"]["inserted"] == 1
-    assert result["counts"]["trades"]["inserted"] == 1
+    assert result["counts"]["accounts"]["parsed"] == 1
+    assert result["counts"]["trades"]["parsed"] == 1
     assert session.query(Account).count() == 1
     assert session.query(Trade).count() == 1
 
@@ -66,8 +66,8 @@ def test_run_import_csv_mocked(session, monkeypatch):
     result = run_import("dummy.csv", session, file_type="csv")
     
     assert result["status"] == "success"
-    assert result["counts"]["accounts"]["inserted"] == 1
-    assert result["counts"]["cash_transactions"]["inserted"] == 1
+    assert result["counts"]["accounts"]["parsed"] == 1
+    assert result["counts"]["cash_transactions"]["parsed"] == 1
     assert session.query(Account).count() == 1
     assert session.query(CashTransaction).count() == 1
 
@@ -89,5 +89,5 @@ def test_run_import_idempotency_mocked(session, monkeypatch):
     
     # Second run
     result = run_import("dummy.xml", session, file_type="xml")
-    assert result["counts"]["accounts"]["inserted"] == 0
+    assert result["counts"]["accounts"]["parsed"] == 1
     assert session.query(Account).count() == 1

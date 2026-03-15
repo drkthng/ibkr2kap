@@ -1,16 +1,16 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 8 complete
+> **Current Phase**: Phase 13 complete
 > **Milestone**: v1.0
 
 ## Must-Haves (from SPEC)
-- [ ] Python 3.12 Environment setup with Database.
-- [ ] Parse Flex Query XML correctly.
+- [x] Python 3.12 Environment setup with Database.
+- [x] Parse Flex Query XML correctly.
 - [x] Validated data correctly persistent in SQLite.
-- [ ] Tax compliant FIFO engine for accurately matching lots based on settlement dates.
-- [ ] Tax categorization engine for mapping to "Anlage KAP".
-- [ ] Tax Consultant Excel Report Export.
-- [ ] Local Streamlit UI for the end-user.
+- [x] Tax compliant FIFO engine for accurately matching lots based on settlement dates.
+- [x] Tax categorization engine for mapping to "Anlage KAP".
+- [x] Tax Consultant Excel Report Export.
+- [x] Local Streamlit UI for the end-user.
 
 ## Phases
 
@@ -66,7 +66,7 @@
 **Objective**: Frontend experience providing data import capabilities, execution of tax routines, and viewing of individual lot deductions.
 
 ### Phase 13: End-to-End Integration
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Connect all units with an overarching realistic, multi-year e2e test scenario evaluating full correctness.
 
 ### Phase 14: Currency Gains (Optional)

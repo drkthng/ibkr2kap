@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from ibkr_tax.services.flex_parser import FlexXMLParser
 from ibkr_tax.services.csv_parser import CSVActivityParser
 from ibkr_tax.services.option_engine import OptionEngine
-from ibkr_tax.db.repository import import_accounts, import_trades, import_cash_transactions
+from ibkr_tax.db.repository import (
+    import_accounts, 
+    import_trades, 
+    import_cash_transactions,
+    import_corporate_actions
+)
 
 
 def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict[str, Any]:
@@ -33,37 +38,40 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
     trades = parsed_data["trades"]
     cash_txs = parsed_data["cash_transactions"]
     option_eae = parsed_data.get("option_eae", [])
+    corporate_actions = parsed_data.get("corporate_actions", [])
 
-    # Process Option Edge Cases (Adjusts transient 'trades' list and closes option lots in DB)
+    # 1. Insert into database using repository functions
+    import_accounts(session, accounts)
+    import_trades(session, trades)
+    import_cash_transactions(session, cash_txs)
+    import_corporate_actions(session, corporate_actions)
+    
+    # 2. Re-run engines to handle adjustments
+    from ibkr_tax.services.fifo_runner import FIFORunner
+    fifo_runner = FIFORunner(session)
+    
     if option_eae:
+        # Initial FIFO run to create lots needed by OptionEngine
+        fifo_runner.run_all()
+        
+        # Process Option Edge Cases (Adjusts DB Trade records and closes option lots in DB)
         opt_engine = OptionEngine(session)
-        opt_engine.apply_option_adjustments(option_eae, trades)
-
-    # Insert into database using repository functions
-    # Order matters: Accounts must come first due to foreign key constraints
-    accounts_count = import_accounts(session, accounts)
-    trades_count = import_trades(session, trades)
-    cash_txs_count = import_cash_transactions(session, cash_txs)
+        opt_engine.apply_option_adjustments(option_eae)
+        
+        # Final FIFO run to account for adjusted trades
+        fifo_runner.run_all()
+    else:
+        # Standard run if no options
+        fifo_runner.run_all()
 
     return {
         "status": "success",
         "file_path": file_path,
         "file_type": file_type,
         "counts": {
-            "accounts": {
-                "parsed": len(accounts),
-                "inserted": accounts_count
-            },
-            "trades": {
-                "parsed": len(trades),
-                "inserted": trades_count
-            },
-            "cash_transactions": {
-                "parsed": len(cash_txs),
-                "inserted": cash_txs_count
-            },
-            "option_eae": {
-                "parsed": len(option_eae)
-            }
+            "accounts": {"parsed": len(accounts)},
+            "trades": {"parsed": len(trades)},
+            "cash_transactions": {"parsed": len(cash_txs)},
+            "option_eae": {"parsed": len(option_eae)}
         }
     }

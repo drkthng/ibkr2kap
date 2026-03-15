@@ -17,6 +17,7 @@ class Account(Base):
 
     trades: Mapped[List["Trade"]] = relationship(back_populates="account")
     cash_transactions: Mapped[List["CashTransaction"]] = relationship(back_populates="account")
+    corporate_actions: Mapped[List["CorporateAction"]] = relationship(back_populates="account")
 
 class Trade(Base):
     """Trade model tracking transactional data."""
@@ -43,6 +44,20 @@ class Trade(Base):
     account: Mapped["Account"] = relationship(back_populates="trades")
     fifo_lots: Mapped[List["FIFOLot"]] = relationship(back_populates="trade")
     gains: Mapped[List["Gain"]] = relationship(back_populates="sell_trade")
+
+class CorporateAction(Base):
+    """CorporateAction model tracking events like stock splits."""
+    __tablename__ = "corporate_actions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    symbol: Mapped[str] = mapped_column(index=True)
+    action_type: Mapped[str] = mapped_column()  # e.g. StockSplit
+    date: Mapped[str] = mapped_column(index=True)   # ISO date YYYY-MM-DD
+    ratio: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    description: Mapped[str] = mapped_column()
+
+    account: Mapped["Account"] = relationship(back_populates="corporate_actions")
 
 class FIFOLot(Base):
     """FIFOLot model tracking open units for FIFO matching."""

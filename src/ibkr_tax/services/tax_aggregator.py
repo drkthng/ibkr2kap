@@ -75,10 +75,10 @@ class TaxAggregatorService:
             # Type names are from Flex Query: 'Dividends', 'Withholding Tax', 'Payment In Lieu of Dividends', 'Broker Interest Paid/Received'
             if ctx.type in ["Dividends", "Payment In Lieu of Dividends", "Broker Interest Paid/Received"]:
                 # Note: IBKR reports paid interest as negative. For Line 7 we want the net interest/dividends.
-                dividends_interest += ctx.amount
+                dividends_interest += ctx.amount * ctx.fx_rate_to_base
             elif ctx.type == "Withholding Tax":
                 # Withholding tax is negative (money out). Line 15 is positive (tax credit).
-                withholding_tax += abs(ctx.amount)
+                withholding_tax += abs(ctx.amount * ctx.fx_rate_to_base)
 
         # Line 7 = Dividends/Interest + Sonstige Gains
         kap_7 = dividends_interest + sonstige_gains

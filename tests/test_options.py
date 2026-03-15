@@ -3,8 +3,10 @@ from decimal import Decimal
 from datetime import date
 from ibkr_tax.models.database import Account, Trade, FIFOLot, Gain
 from ibkr_tax.services.fifo import FIFOEngine
+from ibkr_tax.services.fifo_runner import FIFORunner
 from ibkr_tax.services.option_engine import OptionEngine
 from ibkr_tax.schemas.ibkr import OptionEAECreate, TradeSchema
+from ibkr_tax.db.repository import import_trades
 
 @pytest.fixture
 def account(db_session):
@@ -21,7 +23,7 @@ def test_option_expiration_long(db_session, account):
         trade_date="2023-01-01", settle_date="2023-01-03",
         currency="USD", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("1"), trade_price=Decimal("5"), proceeds=Decimal("-500"),
-        buy_sell="BUY"
+        buy_sell="BUY", open_close_indicator="O"
     )
     db_session.add(buy_trade)
     db_session.flush()
@@ -33,12 +35,16 @@ def test_option_expiration_long(db_session, account):
         account_id="U123456", currency="USD", fx_rate_to_base=Decimal("1.0"),
         symbol="AAPL  230616C00150000", underlying_symbol="AAPL", strike=Decimal("150"),
         expiry=date(2023, 6, 16), put_call="C", date=date(2023, 6, 16),
-        transaction_type="Expiration", quantity=Decimal("1")
+        transaction_type="Expiration", quantity=Decimal("1"), multiplier=Decimal("100")
     )
     
-    OptionEngine(db_session).apply_option_adjustments([eae], [])
+    OptionEngine(db_session).apply_option_adjustments([eae])
     
-    db_session.refresh(lot)
+    # Expiration creates a synthetic trade. We need to run FIFO to close the lot.
+    FIFORunner(db_session).run_all()
+    
+    # Re-fetch lot
+    lot = db_session.query(FIFOLot).filter_by(trade_id=buy_trade.id).one()
     assert lot.remaining_quantity == 0
     gain = db_session.query(Gain).filter_by(buy_lot_id=lot.id).one()
     assert gain.realized_pnl == Decimal("-500")
@@ -52,7 +58,7 @@ def test_option_expiration_short(db_session, account):
         trade_date="2023-01-01", settle_date="2023-01-03",
         currency="USD", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("-1"), trade_price=Decimal("5"), proceeds=Decimal("500"),
-        buy_sell="SELL"
+        buy_sell="SELL", open_close_indicator="O"
     )
     db_session.add(sell_trade)
     db_session.flush()
@@ -64,17 +70,17 @@ def test_option_expiration_short(db_session, account):
         account_id="U123456", currency="USD", fx_rate_to_base=Decimal("1.0"),
         symbol="AAPL  230616P00150000", underlying_symbol="AAPL", strike=Decimal("150"),
         expiry=date(2023, 6, 16), put_call="P", date=date(2023, 6, 16),
-        transaction_type="Expiration", quantity=Decimal("-1")
+        transaction_type="Expiration", quantity=Decimal("-1"), multiplier=Decimal("100")
     )
     
-    OptionEngine(db_session).apply_option_adjustments([eae], [])
+    OptionEngine(db_session).apply_option_adjustments([eae])
     
-    db_session.refresh(lot)
+    FIFORunner(db_session).run_all()
+    
+    lot = db_session.query(FIFOLot).filter_by(trade_id=sell_trade.id).one()
     assert lot.remaining_quantity == 0
     gain = db_session.query(Gain).filter_by(buy_lot_id=lot.id).one()
     # For Short, proceeds was positive (500). Expiration means we keep it. PnL = 500.
-    # Note: cost_basis_total for short lot is NEGATIVE in our FIFO logic.
-    # PnL = 0 - (-500) = 500.
     assert gain.realized_pnl == Decimal("500")
 
 def test_call_exercise_long(db_session, account):
@@ -85,7 +91,7 @@ def test_call_exercise_long(db_session, account):
         trade_date="2023-01-01", settle_date="2023-01-03",
         currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("1"), trade_price=Decimal("5"), proceeds=Decimal("-500"),
-        buy_sell="BUY"
+        buy_sell="BUY", open_close_indicator="O"
     )
     db_session.add(buy_opt)
     db_session.flush()
@@ -96,8 +102,9 @@ def test_call_exercise_long(db_session, account):
         symbol="AAPL", description="Apple", trade_date=date(2023, 6, 16),
         settle_date=date(2023, 6, 18), currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("100"), trade_price=Decimal("150"), proceeds=Decimal("-15000"),
-        buy_sell="BUY"
+        buy_sell="BUY", open_close_indicator="O"
     )
+    import_trades(db_session, [stock_trade])
     
     eae = OptionEAECreate(
         account_id="U123456", currency="EUR", fx_rate_to_base=Decimal("1.0"),
@@ -106,10 +113,10 @@ def test_call_exercise_long(db_session, account):
         transaction_type="Exercise", quantity=Decimal("1"), multiplier=Decimal("100")
     )
     
-    trades = [stock_trade]
-    OptionEngine(db_session).apply_option_adjustments([eae], trades)
+    OptionEngine(db_session).apply_option_adjustments([eae])
     
-    assert trades[0].proceeds == Decimal("-15500") # -15000 - 500
+    db_trade = db_session.query(Trade).filter_by(ib_trade_id="STK_B1").one()
+    assert db_trade.proceeds == Decimal("-15500") # -15000 - 500
     assert db_session.query(FIFOLot).filter_by(symbol="AAPL Call").one().remaining_quantity == 0
 
 def test_put_exercise_long(db_session, account):
@@ -120,7 +127,7 @@ def test_put_exercise_long(db_session, account):
         trade_date="2023-01-01", settle_date="2023-01-03",
         currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("1"), trade_price=Decimal("5"), proceeds=Decimal("-500"),
-        buy_sell="BUY"
+        buy_sell="BUY", open_close_indicator="O"
     )
     db_session.add(buy_opt)
     db_session.flush()
@@ -131,8 +138,9 @@ def test_put_exercise_long(db_session, account):
         symbol="AAPL", description="Apple", trade_date=date(2023, 6, 16),
         settle_date=date(2023, 6, 18), currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("-100"), trade_price=Decimal("150"), proceeds=Decimal("15000"),
-        buy_sell="SELL"
+        buy_sell="SELL", open_close_indicator="C"
     )
+    import_trades(db_session, [stock_trade])
     
     eae = OptionEAECreate(
         account_id="U123456", currency="EUR", fx_rate_to_base=Decimal("1.0"),
@@ -141,10 +149,10 @@ def test_put_exercise_long(db_session, account):
         transaction_type="Exercise", quantity=Decimal("1"), multiplier=Decimal("100")
     )
     
-    trades = [stock_trade]
-    OptionEngine(db_session).apply_option_adjustments([eae], trades)
+    OptionEngine(db_session).apply_option_adjustments([eae])
     
-    assert trades[0].proceeds == Decimal("14500") # 15000 - 500
+    db_trade = db_session.query(Trade).filter_by(ib_trade_id="STK_S1").one()
+    assert db_trade.proceeds == Decimal("14500") # 15000 - 500
     assert db_session.query(FIFOLot).filter_by(symbol="AAPL Put").one().remaining_quantity == 0
 
 def test_call_assignment_short(db_session, account):
@@ -155,7 +163,7 @@ def test_call_assignment_short(db_session, account):
         trade_date="2023-01-01", settle_date="2023-01-03",
         currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("-1"), trade_price=Decimal("5"), proceeds=Decimal("500"),
-        buy_sell="SELL"
+        buy_sell="SELL", open_close_indicator="O"
     )
     db_session.add(sell_opt)
     db_session.flush()
@@ -166,8 +174,9 @@ def test_call_assignment_short(db_session, account):
         symbol="AAPL", description="Apple", trade_date=date(2023, 6, 16),
         settle_date=date(2023, 6, 18), currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("-100"), trade_price=Decimal("150"), proceeds=Decimal("15000"),
-        buy_sell="SELL"
+        buy_sell="SELL", open_close_indicator="C"
     )
+    import_trades(db_session, [stock_trade])
     
     eae = OptionEAECreate(
         account_id="U123456", currency="EUR", fx_rate_to_base=Decimal("1.0"),
@@ -176,13 +185,11 @@ def test_call_assignment_short(db_session, account):
         transaction_type="Assignment", quantity=Decimal("-1"), multiplier=Decimal("100")
     )
     
-    trades = [stock_trade]
-    OptionEngine(db_session).apply_option_adjustments([eae], trades)
+    OptionEngine(db_session).apply_option_adjustments([eae])
     
-    # Premium received = 500. Proceeds = 15000 + 500 = 15500.
-    # Logic: proceeds -= premium_in_currency where premium_in_currency is NEGATIVE for short lot (-500)
-    # 15000 - (-500) = 15500. Correct.
-    assert trades[0].proceeds == Decimal("15500")
+    db_trade = db_session.query(Trade).filter_by(ib_trade_id="STK_S2").one()
+    assert db_trade.proceeds == Decimal("15500") # 15000 + 500
+    assert db_session.query(FIFOLot).filter_by(symbol="AAPL Call Short").one().remaining_quantity == 0
 
 def test_put_assignment_short(db_session, account):
     # Short Put Assignment -> Deduct premium received from stock cost (Buy stock)
@@ -192,7 +199,7 @@ def test_put_assignment_short(db_session, account):
         trade_date="2023-01-01", settle_date="2023-01-03",
         currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("-1"), trade_price=Decimal("5"), proceeds=Decimal("500"),
-        buy_sell="SELL"
+        buy_sell="SELL", open_close_indicator="O"
     )
     db_session.add(sell_opt)
     db_session.flush()
@@ -203,8 +210,9 @@ def test_put_assignment_short(db_session, account):
         symbol="AAPL", description="Apple", trade_date=date(2023, 6, 16),
         settle_date=date(2023, 6, 18), currency="EUR", fx_rate_to_base=Decimal("1.0"),
         quantity=Decimal("100"), trade_price=Decimal("150"), proceeds=Decimal("-15000"),
-        buy_sell="BUY"
+        buy_sell="BUY", open_close_indicator="O"
     )
+    import_trades(db_session, [stock_trade])
     
     eae = OptionEAECreate(
         account_id="U123456", currency="EUR", fx_rate_to_base=Decimal("1.0"),
@@ -213,10 +221,8 @@ def test_put_assignment_short(db_session, account):
         transaction_type="Assignment", quantity=Decimal("-1"), multiplier=Decimal("100")
     )
     
-    trades = [stock_trade]
-    OptionEngine(db_session).apply_option_adjustments([eae], trades)
+    OptionEngine(db_session).apply_option_adjustments([eae])
     
-    # Premium received = 500. Cost = 15000 - 500 = 14500.
-    # proceeds = -15000. New proceeds = -14500.
-    # -15000 - (-500) = -14500. Correct.
-    assert trades[0].proceeds == Decimal("-14500")
+    db_trade = db_session.query(Trade).filter_by(ib_trade_id="STK_B2").one()
+    assert db_trade.proceeds == Decimal("-14500") # -15000 - (-500) = -14500
+    assert db_session.query(FIFOLot).filter_by(symbol="AAPL Put Short").one().remaining_quantity == 0

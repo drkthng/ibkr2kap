@@ -69,8 +69,8 @@ def test_generate_report_with_mixed_data(db_session):
     report = service.generate_report("U1234567", 2024)
 
     # 5. Assertions
-    # Line 7: Dividends (100) + Sonstige Gains (1000) = 1100
-    assert report.kap_line_7_kapitalertraege == Decimal("1100.00")
+    # Line 7: Dividends (100 * 0.9 = 90) + Sonstige Gains (1000) = 1090
+    assert report.kap_line_7_kapitalertraege == Decimal("1090.00")
     
     # Line 8: Positive Aktien Gain = 500
     assert report.kap_line_8_gewinne_aktien == Decimal("500.00")
@@ -81,8 +81,8 @@ def test_generate_report_with_mixed_data(db_session):
     # Line 10: Termingeschäft Gain = 200
     assert report.kap_line_10_termingeschaefte == Decimal("200.00")
     
-    # Line 15: Withholding Tax (absolute) = 15
-    assert report.kap_line_15_quellensteuer == Decimal("15.00")
+    # Line 15: Withholding Tax (absolute, in EUR) = 15 * 0.9 = 13.5
+    assert report.kap_line_15_quellensteuer == Decimal("13.50")
     
     # Total PnL: 500 - 200 + 200 + 1000 = 1500
     assert report.total_realized_pnl == Decimal("1500.00")

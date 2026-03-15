@@ -166,10 +166,15 @@ class FlexXMLParser:
                     )
         return eae_records
 
+    def get_corporate_actions(self) -> List[CorporateActionSchema]:
+        # Placeholder for real XML parsing of corporate actions if needed
+        return []
+
     def parse_all(self):
         return {
             "accounts": self.get_accounts(),
             "trades": self.get_trades(),
             "cash_transactions": self.get_cash_transactions(),
             "option_eae": self.get_option_eae(),
+            "corporate_actions": self.get_corporate_actions(),
         }

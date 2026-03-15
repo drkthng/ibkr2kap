@@ -14,22 +14,49 @@ class FIFORunner:
             self.run_for_account(account.id)
 
     def run_for_account(self, account_id: int):
-        """Runs the FIFO engine for a specific account, ensuring idempotency by clearing existing FIFO data."""
+        """Runs the FIFO engine for a specific account, ensuring interleaving of trades and corporate actions."""
         # 1. Clear existing FIFO state for this account context
         self._clear_fifo_data(account_id)
         
-        # 2. Fetch all trades for the account, ordered by settle_date then id
-        stmt = (
+        # 2. Fetch all trades for the account
+        stmt_trades = (
             select(Trade)
             .where(Trade.account_id == account_id)
-            .order_by(asc(Trade.settle_date), asc(Trade.id))
         )
-        trades = self.session.execute(stmt).scalars().all()
+        trades = self.session.execute(stmt_trades).scalars().all()
         
-        # 3. Process each trade through the engine
-        engine = FIFOEngine(self.session)
-        for trade in trades:
-            engine.process_trade(trade)
+        # 3. Fetch all corporate actions for the account
+        from ibkr_tax.models.database import CorporateAction
+        stmt_ca = (
+            select(CorporateAction)
+            .where(CorporateAction.account_id == account_id)
+        )
+        actions = self.session.execute(stmt_ca).scalars().all()
+        
+        # 4. Interleave and sort by date. 
+        # Trades use 'settle_date', Actions use 'date'.
+        # We'll use a consistent key: (date_str, type_priority, id)
+        # Type priority: Corporate Actions (0) before Trades (1) on the same date?
+        # Usually, a split happens at market open.
+        
+        events = []
+        for t in trades:
+            events.append({"date": t.settle_date, "type": "trade", "obj": t, "id": t.id})
+        for a in actions:
+            events.append({"date": a.date, "type": "action", "obj": a, "id": a.id})
+            
+        events.sort(key=lambda x: (x["date"], 0 if x["type"] == "action" else 1, x["id"]))
+        
+        # 5. Process events
+        fifo_engine = FIFOEngine(self.session)
+        from ibkr_tax.services.corporate_actions import CorporateActionEngine
+        ca_engine = CorporateActionEngine(self.session)
+        
+        for event in events:
+            if event["type"] == "trade":
+                fifo_engine.process_trade(event["obj"])
+            else:
+                ca_engine.apply_stock_split(event["obj"])
         
         self.session.commit()
 
