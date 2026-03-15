@@ -83,8 +83,10 @@ class CashTransactionSchema(BaseIBKRSchema):
         "Payment In Lieu Of Dividends",
         "Broker Interest Paid",
         "Broker Interest Received",
+        "Bond Interest Received",
+        "Bond Interest Paid",
         "Other Fees",
-        "Deposits/Withdrawals",
+        "Deposits & Withdrawals",
         "Commission Adjustments",
     ]
     currency: str = Field(..., max_length=3)
