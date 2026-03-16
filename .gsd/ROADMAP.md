@@ -47,6 +47,10 @@ All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` fo
 **Status**: ✅ Complete
 **Objective**: Implement one-click app startup and OS taskbar/dock pinning capabilities (Windows Tauri executable, macOS Smart Launcher script). Cleanly handle Streamlit server shutdown. Document Flex Query setup.
 
+### Phase 21: Bug Fix: Missing Cost-Basis Reporting
+**Status**: ✅ Complete
+**Objective**: Restrict missing cost-basis warnings to the specific tax year requesting the report. Ensure trades from future years do not trigger errors in current reports.
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Advanced corporate action support (Spinoffs, Mergers).

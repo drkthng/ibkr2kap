@@ -4,12 +4,12 @@
 > **Last Updated**: 2026-03-16
 
 ## Current Position
-- **Phase**: 20 (completed)
+- **Phase**: 21 (completed)
 - **Task**: All tasks complete
 - **Status**: Verified
 
 ## Last Session Summary
-Phase 20 executed successfully. Implemented a native app launcher (`launcher.py`) using `pywebview` and `PySide6` for a standalone window experience with clean background server shutdown. Provided macOS one-click launcher scripts. Completely revised the IBKR Flex Query documentation (`docs/FLEX_QUERY_SETUP.md`) with the 365-day export strategy.
+Phase 21 executed successfully. Fixed bug where missing cost basis warnings were not filtered by tax year. Verified with unit tests and regression testing.
 
 ## Next Steps
-1. Proceed to Milestone v2.0 or additional UI enhancements.
+1. Proceed to Milestone v2.0 or further enhancements.
