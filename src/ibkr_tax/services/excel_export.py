@@ -1,8 +1,8 @@
 from decimal import Decimal
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.orm import Session, joinedload
 from ibkr_tax.schemas.report import TaxReport
 from ibkr_tax.models.database import Gain, Trade, FXGain, FXFIFOLot
 
@@ -70,7 +70,7 @@ class ExcelExportService:
         detail_sheet = wb.create_sheet("Gains Detail")
         
         detail_headers = [
-            "Datum", "Symbol", "Tax Pool", "Quantity", 
+            "Verkaufsdatum", "Anschaffungsdatum", "Symbol", "Tax Pool", "Quantity", 
             "Proceeds (EUR)", "Cost Basis (EUR)", "Gain/Loss (EUR)"
         ]
         for col_idx, header in enumerate(detail_headers, 1):
@@ -86,6 +86,7 @@ class ExcelExportService:
         from ibkr_tax.models.database import Account
         stmt = (
             select(Gain)
+            .options(joinedload(Gain.buy_lot))
             .join(Trade, Gain.sell_trade_id == Trade.id)
             .join(Account, Trade.account_id == Account.id)
             .where(Account.account_id == report.account_id)
@@ -97,10 +98,11 @@ class ExcelExportService:
         qty_format = '#,##0.0000'
         for r_idx, g in enumerate(gains, 2):
             detail_sheet.cell(row=r_idx, column=1).value = g.sell_trade.settle_date
-            detail_sheet.cell(row=r_idx, column=2).value = g.sell_trade.symbol
-            detail_sheet.cell(row=r_idx, column=3).value = g.tax_pool
+            detail_sheet.cell(row=r_idx, column=2).value = g.buy_lot.settle_date
+            detail_sheet.cell(row=r_idx, column=3).value = g.sell_trade.symbol
+            detail_sheet.cell(row=r_idx, column=4).value = g.tax_pool
             
-            qty_cell = detail_sheet.cell(row=r_idx, column=4)
+            qty_cell = detail_sheet.cell(row=r_idx, column=5)
             qty_cell.value = g.quantity_matched
             qty_cell.number_format = qty_format
             
@@ -112,13 +114,13 @@ class ExcelExportService:
             c_cell.value = g.cost_basis_matched
             c_cell.number_format = euro_format
             
-            gn_cell = detail_sheet.cell(row=r_idx, column=7)
+            gn_cell = detail_sheet.cell(row=r_idx, column=8)
             gn_cell.value = g.realized_pnl
             gn_cell.number_format = euro_format
             
         detail_sheet.freeze_panes = "A2"
         # Auto-width for detail sheet columns (rough estimate)
-        for col in ["A", "B", "C", "D", "E", "F", "G"]:
+        for col in ["A", "B", "C", "D", "E", "F", "G", "H"]:
             detail_sheet.column_dimensions[col].width = 15
 
         # --- Sheet 3: FX Gains Detail (§ 23 EStG) ---
