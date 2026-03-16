@@ -8,6 +8,7 @@ from ibkr_tax.services.pipeline import run_import
 from ibkr_tax.services.fifo_runner import FIFORunner
 from ibkr_tax.services.tax_aggregator import TaxAggregatorService
 from ibkr_tax.services.excel_export import ExcelExportService
+from ibkr_tax.db.repository import get_distinct_account_ids, get_tax_years_for_account
 
 # --- Page Config ---
 st.set_page_config(
@@ -46,7 +47,7 @@ st.sidebar.info("Local-first tax assistant for German IBKR users.")
 # --- Main UI ---
 st.title("🛡️ IBKR2KAP — Tax Reporting")
 
-tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📊 Anlage KAP Report"])
+tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📊 Anlage KAP Report", "🗄️ Database Browser"])
 
 # --- Tab 1: Data Import ---
 with tabs[0]:
@@ -136,17 +137,29 @@ with tabs[1]:
 with tabs[2]:
     st.header("Anlage KAP Generation")
     st.markdown("Generate the final tax report figures for a specific account and year.")
+    # Fetch available accounts
+    with SessionLocal() as session:
+        available_accounts = get_distinct_account_ids(session)
     
-    col_acc, col_year = st.columns(2)
-    with col_acc:
-        account_id = st.text_input("IBKR Account ID", placeholder="e.g. U1234567")
-    with col_year:
-        tax_year = st.number_input("Tax Year", min_value=2020, max_value=2030, value=2024)
-    
-    if st.button("📊 Generate Tax Report"):
-        if not account_id:
-            st.warning("Please enter an Account ID.")
-        else:
+    if not available_accounts:
+        st.info("No accounts found in the database. Please import some IBKR data first.")
+    else:
+        col_acc, col_year = st.columns(2)
+        with col_acc:
+            account_id = st.selectbox("IBKR Account ID", options=available_accounts)
+        
+        # Fetch available years for the selected account
+        with SessionLocal() as session:
+            available_years = get_tax_years_for_account(session, account_id)
+        
+        with col_year:
+            if not available_years:
+                st.warning("No tax data found for this account.")
+                tax_year = None
+            else:
+                tax_year = st.selectbox("Tax Year", options=available_years)
+        
+        if tax_year and st.button("📊 Generate Tax Report"):
             with st.spinner("Aggregating tax data..."):
                 try:
                     with SessionLocal() as session:
@@ -187,3 +200,37 @@ with tabs[2]:
                         
                 except Exception as e:
                     st.error(f"Error generating report: {e}")
+
+# --- Tab 4: Database Browser ---
+with tabs[3]:
+    import pandas as pd
+    st.header("🗄️ Database Browser")
+    st.markdown("Inspect raw data directly from the SQLite database.")
+    
+    try:
+        # Fetch all table names
+        query_tables = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
+        tables_df = pd.read_sql(query_tables, con=engine)
+        table_names = sorted(tables_df["name"].tolist())
+        
+        if not table_names:
+            st.info("No tables found in the database.")
+        else:
+            selected_table = st.selectbox("Select Table to Inspect", table_names)
+            
+            if selected_table:
+                col_ctrl1, col_ctrl2 = st.columns([1, 4])
+                # We don't strictly need a refresh button as Streamlit reruns on change, 
+                # but a button can force it if using caching.
+                
+                # Fetch row count
+                count_df = pd.read_sql(f'SELECT count(*) as count FROM "{selected_table}"', con=engine)
+                row_count = count_df["count"][0]
+                st.write(f"Showing data for **{selected_table}** ({row_count} rows)")
+                
+                # Load data (using limited load if too big, but for now full load)
+                df = pd.read_sql(f'SELECT * FROM "{selected_table}"', con=engine)
+                st.dataframe(df, use_container_width=True)
+                
+    except Exception as e:
+        st.error(f"Error browsing database: {e}")
