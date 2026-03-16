@@ -69,9 +69,10 @@ Because IBKR2KAP processes sensitive financial data, it is designed to be run lo
 
 1.  **Export from IBKR:** 
     *   Please follow our detailed guide: **[Interactive Brokers Flex Query Setup Guide](docs/FLEX_QUERY_SETUP.md)**.
-    *   Export as **XML**.
-2.  **Import to IBKR2KAP:** Open the Streamlit app in your browser, upload the XML file.
-3.  **Process:** Click "Run Tax Engine". The system will ingest the data, run the FIFO matching (both Asset and FX), and categorize the output.
+    *   *Note:* IBKR limits Flex Queries to 365 days. You must export multiple XML files to cover your history, or export an Activity Statement CSV.
+    *   Export as **XML** (or CSV).
+2.  **Import to IBKR2KAP:** Open the Streamlit app in your browser, upload ALL your exported files at once.
+3.  **Process:** Click "Run Tax Engine". The system will automatically deduplicate the data, run the FIFO matching across all files, and categorize the output.
 4.  **Export:** Download the generated Excel (`.xlsx`) report and hand it to your *Steuerberater* (Tax Consultant).
 
 ## ⚠️ Disclaimer
