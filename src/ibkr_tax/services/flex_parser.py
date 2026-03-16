@@ -1,7 +1,8 @@
 import re
 from decimal import Decimal
-from typing import List, Any
+from typing import List, Any, Dict
 from datetime import datetime, date
+import xml.etree.ElementTree as ET
 
 from ibflex import parser
 from ibflex.Types import FlexStatement, Trade, CashTransaction
@@ -20,6 +21,8 @@ class FlexXMLParser:
                 data = f.read()
         else:
             raise ValueError("Either xml_content or xml_path must be provided.")
+
+        self.raw_data = data
 
         # Preprocessing to handle ibflex 0.15 incompatibilities with new IBKR attributes
         self.action_ids = {} # (account_id, dateTime_str, amount_str, type_str) -> actionID
@@ -170,6 +173,49 @@ class FlexXMLParser:
         # Placeholder for real XML parsing of corporate actions if needed
         return []
 
+    def get_unmapped_entities(self) -> List[Dict[str, str]]:
+        """Identify entities in the XML that are not handled by the current version of the app."""
+        warnings = []
+        
+        # Tags we actively support and parse
+        supported_tags = {
+            "AccountInformation", "Trades", "CashTransactions", 
+            "OptionEAE", "CorporateActions"
+        }
+        
+        # Tags we explicitly ignore (e.g., purely informational or known and safe to skip)
+        ignored_tags = {
+            "FlexStatementDetails", "EquitySummaryByReportDate", "TransferSignals",
+            "ChangeInDividendAccrual", "OpenPositions", "SecurityInfo", 
+            "ConversionRates", "CFDCharges", "PriorPeriodPositions"
+        }
+
+        try:
+            root = ET.fromstring(self.raw_data)
+            # Standard Flex Query structure is FlexQueryResponse -> FlexStatements -> FlexStatement
+            for statements in root.findall(".//FlexStatements"):
+                for statement in statements.findall("FlexStatement"):
+                    account_id = statement.get("accountId", "UNKNOWN")
+                    for child in statement:
+                        tag = child.tag
+                        if tag not in supported_tags and tag not in ignored_tags:
+                            # Avoid duplicate warnings for the same tag in the same statement
+                            if not any(w["entity"] == tag and w["account_id"] == account_id for w in warnings):
+                                warnings.append({
+                                    "entity": tag,
+                                    "account_id": account_id,
+                                    "message": f"Detected unhandled data section '{tag}'. This data is currently ignored for tax calculations."
+                                })
+        except Exception as e:
+            # Fallback if XML is malformed or ElementTree fails
+            warnings.append({
+                "entity": "XMLParser",
+                "account_id": "GLOBAL",
+                "message": f"Failed to perform deep inspection for unknown entities: {e}"
+            })
+        
+        return warnings
+
     def parse_all(self):
         return {
             "accounts": self.get_accounts(),
@@ -177,4 +223,5 @@ class FlexXMLParser:
             "cash_transactions": self.get_cash_transactions(),
             "option_eae": self.get_option_eae(),
             "corporate_actions": self.get_corporate_actions(),
+            "warnings": self.get_unmapped_entities(),
         }

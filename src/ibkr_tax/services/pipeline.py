@@ -84,5 +84,6 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
             "trades": {"parsed": len(trades)},
             "cash_transactions": {"parsed": len(cash_txs)},
             "option_eae": {"parsed": len(option_eae)}
-        }
+        },
+        "warnings": parsed_data.get("warnings", [])
     }

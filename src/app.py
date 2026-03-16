@@ -61,6 +61,12 @@ with tabs[0]:
                             session.commit()
                             st.success(f"Successfully processed {xml_file.name}")
                             st.json(results["counts"])
+                            
+                            if results.get("warnings"):
+                                st.warning("⚠️ **Unsupported Data Entities Found**")
+                                for warning in results["warnings"]:
+                                    st.write(f"- **{warning['entity']}** (Account: {warning['account_id']}): {warning['message']}")
+                                st.info("Note: The data above was skipped as there is currently no handling for these record types in this version of the app.")
                     except Exception as e:
                         st.error(f"Error processing XML: {e}")
                     finally:
@@ -82,6 +88,11 @@ with tabs[0]:
                             session.commit()
                             st.success(f"Successfully processed {csv_file.name}")
                             st.json(results["counts"])
+                            
+                            if results.get("warnings"):
+                                st.warning("⚠️ **Unsupported Data Entities Found**")
+                                for warning in results["warnings"]:
+                                    st.write(f"- **{warning['entity']}** (Account: {warning.get('account_id', 'Unknown')}): {warning['message']}")
                     except Exception as e:
                         st.error(f"Error processing CSV: {e}")
                     finally:
