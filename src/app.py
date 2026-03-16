@@ -167,6 +167,7 @@ with tabs[2]:
                         report = aggregator.generate_report(account_id, tax_year)
                         
                         # Check for warnings
+                        can_show_report = True
                         if report.missing_cost_basis_warnings:
                             st.warning("⚠️ **Missing Cost Basis Detected**")
                             st.error("The following sell trades do not have corresponding buy trades. This will lead to an incorrect taxable gain/loss calculation (treated as 100% gain if not resolved).")
@@ -176,39 +177,40 @@ with tabs[2]:
                             st.info("💡 To fix this, you may need to import historical data from previous years or manually adjust lots.")
                             
                             if not st.checkbox("Generate report anyway despite missing data"):
-                                st.stop()
-
-                        # Display Metrics
-                        st.subheader(f"Report Summary for {account_id} ({tax_year})")
-                        m1, m2, m3 = st.columns(3)
-                        m1.metric("KAP Line 7 (Kapitalerträge)", f"{report.kap_line_7_kapitalertraege:,.2f} €")
-                        m2.metric("KAP Line 8 (Gewinne Aktien)", f"{report.kap_line_8_gewinne_aktien:,.2f} €")
-                        m3.metric("KAP Line 9 (Verluste Aktien)", f"{report.kap_line_9_verluste_aktien:,.2f} €")
+                                can_show_report = False
                         
-                        m4, m5, m6 = st.columns(3)
-                        m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €")
-                        m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €")
-                        m6.metric("Total Realized PnL", f"{report.total_realized_pnl:,.2f} €")
-                        
-                        # Excel Export
-                        st.divider()
-                        st.subheader("📥 Export to Excel")
-                        
-                        exporter = ExcelExportService(session)
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-                            tmp_path = tmp.name
-                        
-                        exporter.export(report, tmp_path)
-                        
-                        with open(tmp_path, "rb") as f:
-                            btn = st.download_button(
-                                label="Download Anlage KAP Excel Report",
-                                data=f,
-                                file_name=f"Anlage_KAP_{account_id}_{tax_year}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                        
-                        os.remove(tmp_path)
+                        if can_show_report:
+                            # Display Metrics
+                            st.subheader(f"Report Summary for {account_id} ({tax_year})")
+                            m1, m2, m3 = st.columns(3)
+                            m1.metric("KAP Line 7 (Kapitalerträge)", f"{report.kap_line_7_kapitalertraege:,.2f} €")
+                            m2.metric("KAP Line 8 (Gewinne Aktien)", f"{report.kap_line_8_gewinne_aktien:,.2f} €")
+                            m3.metric("KAP Line 9 (Verluste Aktien)", f"{report.kap_line_9_verluste_aktien:,.2f} €")
+                            
+                            m4, m5, m6 = st.columns(3)
+                            m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €")
+                            m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €")
+                            m6.metric("Total Realized PnL", f"{report.total_realized_pnl:,.2f} €")
+                            
+                            # Excel Export
+                            st.divider()
+                            st.subheader("📥 Export to Excel")
+                            
+                            exporter = ExcelExportService(session)
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+                                tmp_path = tmp.name
+                            
+                            exporter.export(report, tmp_path)
+                            
+                            with open(tmp_path, "rb") as f:
+                                btn = st.download_button(
+                                    label="Download Anlage KAP Excel Report",
+                                    data=f,
+                                    file_name=f"Anlage_KAP_{account_id}_{tax_year}.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                )
+                            
+                            os.remove(tmp_path)
                         
                 except Exception as e:
                     st.error(f"Error generating report: {e}")

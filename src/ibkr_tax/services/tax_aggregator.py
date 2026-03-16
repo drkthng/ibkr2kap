@@ -84,7 +84,9 @@ class TaxAggregatorService:
         kap_7 = dividends_interest + sonstige_gains
 
         # 3. Detect Missing Cost Basis (Unresolved Short Positions)
-        from ibkr_tax.models.database import FIFOLot
+        from ibkr_tax.models.database import FIFOLot, FXFIFOLot
+        
+        # 3a. Symbol-basis missing cost basis
         stmt_missing = (
             select(FIFOLot)
             .join(Trade, FIFOLot.trade_id == Trade.id)
@@ -99,6 +101,20 @@ class TaxAggregatorService:
             qty_clean = abs(lot.remaining_quantity).normalize()
             warnings.append(
                 f"Missing cost basis for {qty_clean:f} shares of {lot.symbol} (first sold on {lot.settle_date})"
+            )
+
+        # 3b. FX-basis missing cost basis
+        stmt_fx_missing = (
+            select(FXFIFOLot)
+            .where(FXFIFOLot.account_id == account_db_id)
+            .where(FXFIFOLot.remaining_amount < 0)
+            .where(FXFIFOLot.acquisition_date.like(f"{tax_year}%"))
+        )
+        missing_fx_lots = self.session.execute(stmt_fx_missing).scalars().all()
+        for fx_lot in missing_fx_lots:
+            amt_clean = abs(fx_lot.remaining_amount).normalize()
+            warnings.append(
+                f"Missing cost basis for {amt_clean:f} {fx_lot.currency} (disposed on {fx_lot.acquisition_date})"
             )
 
         return TaxReport(

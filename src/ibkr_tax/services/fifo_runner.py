@@ -22,6 +22,7 @@ class FIFORunner:
         stmt_trades = (
             select(Trade)
             .where(Trade.account_id == account_id)
+            .where(Trade.asset_category != "CASH")
         )
         trades = self.session.execute(stmt_trades).scalars().all()
         

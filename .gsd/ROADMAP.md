@@ -51,6 +51,10 @@ All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` fo
 **Status**: ✅ Complete
 **Objective**: Restrict missing cost-basis warnings to the specific tax year requesting the report. Ensure trades from future years do not trigger errors in current reports.
 
+### Phase 22: UI and FX Bug Fixes
+**Status**: ✅ Complete
+**Objective**: Resolve Data Browser tab disappearance by removing `st.stop()` and exclude FX trades from standard FIFO engine to prevent incorrect "missing cost-basis" warnings for currency conversions.
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Advanced corporate action support (Spinoffs, Mergers).

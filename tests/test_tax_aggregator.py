@@ -140,3 +140,26 @@ def test_generate_report_with_missing_cost_basis(db_session):
     assert len(report.missing_cost_basis_warnings) == 1
     assert "Missing cost basis for 10 shares of TSLA" in report.missing_cost_basis_warnings[0]
     assert "first sold on 2024-01-03" in report.missing_cost_basis_warnings[0]
+
+def test_generate_report_with_missing_fx_cost_basis(db_session):
+    from ibkr_tax.models.database import FXFIFOLot
+    # 1. Setup Data
+    acc = Account(account_id="U2222222")
+    db_session.add(acc)
+    db_session.commit()
+
+    # Create a negative FX lot for 2024
+    lot = FXFIFOLot(account_id=acc.id, currency="USD", acquisition_date="2024-06-01",
+                    original_amount=Decimal("-100"), remaining_amount=Decimal("-100"),
+                    cost_basis_total_eur=Decimal("90"), cost_basis_per_unit_eur=Decimal("0.9"))
+    db_session.add(lot)
+    db_session.commit()
+
+    # 2. Run Aggregator for 2024
+    service = TaxAggregatorService(db_session)
+    report = service.generate_report("U2222222", 2024)
+
+    # 3. Assertions
+    assert len(report.missing_cost_basis_warnings) == 1
+    assert "Missing cost basis for 100 USD" in report.missing_cost_basis_warnings[0]
+    assert "disposed on 2024-06-01" in report.missing_cost_basis_warnings[0]
