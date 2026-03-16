@@ -27,3 +27,6 @@ class TaxReport(BaseModel):
     
     # Summary Field
     total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
+
+    # Warnings
+    missing_cost_basis_warnings: list[str] = Field(default_factory=list)

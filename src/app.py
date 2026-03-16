@@ -166,6 +166,18 @@ with tabs[2]:
                         aggregator = TaxAggregatorService(session)
                         report = aggregator.generate_report(account_id, tax_year)
                         
+                        # Check for warnings
+                        if report.missing_cost_basis_warnings:
+                            st.warning("⚠️ **Missing Cost Basis Detected**")
+                            st.error("The following sell trades do not have corresponding buy trades. This will lead to an incorrect taxable gain/loss calculation (treated as 100% gain if not resolved).")
+                            for warning in report.missing_cost_basis_warnings:
+                                st.write(f"- {warning}")
+                            
+                            st.info("💡 To fix this, you may need to import historical data from previous years or manually adjust lots.")
+                            
+                            if not st.checkbox("Generate report anyway despite missing data"):
+                                st.stop()
+
                         # Display Metrics
                         st.subheader(f"Report Summary for {account_id} ({tax_year})")
                         m1, m2, m3 = st.columns(3)
