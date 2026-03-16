@@ -16,6 +16,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- Hide Streamlit Menu and Deploy Button ---
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display:none;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- Database Initialization ---
 @st.cache_resource
 def init_connection():
