@@ -1,16 +1,17 @@
 # STATE.md
 
-> **Current Position**: Milestone v1.0 Complete
-> **Last Updated**: 2026-03-15
+> **Current Position**: Phase 17 Planned
+> **Last Updated**: 2026-03-16
 
 ## Current Position
-- **Phase**: 16
+- **Phase**: 17
 - **Task**: Planning complete
 - **Status**: Ready for execution
 
 ## Last Session Summary
-Phase 15 executed successfully. XML ingestion error reporting implemented using ElementTree for robust entity detection and displayed as warnings in Streamlit.
-Phase 16 plans have been generated.
+Phase 17 planned with 2 plans across 2 waves:
+- Plan 17.1 (wave 1): Repository queries for dynamic dropdown data
+- Plan 17.2 (wave 2): Streamlit UI dynamic cascading selectboxes
 
 ## Next Steps
-1. /execute 16
+1. /execute 17
