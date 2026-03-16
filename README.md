@@ -60,14 +60,15 @@ Because IBKR2KAP processes sensitive financial data, it is designed to be run lo
     ```bash
     streamlit run src/ibkr_tax/main.py
     ```
+    
+    > **Note on One-Click Launch:**
+    > - **Windows Users:** A standalone one-click executable wrapper (Tauri) is planned for easy launching without opening a terminal.
+    > - **macOS / Technical Users:** A smart launcher script will automatically activate the environment and start the app with a single click.
 
 ## 📊 Usage
 
 1.  **Export from IBKR:** 
-    *   Log into IBKR Client Portal.
-    *   Go to Reports / Tax Docs -> Flex Queries.
-    *   Create a new **Activity Flex Query** encompassing the tax year you need.
-    *   Ensure all sections are included (Trades, Cash Transactions, Corporate Actions, Open Positions).
+    *   Please follow our detailed guide: **[Interactive Brokers Flex Query Setup Guide](docs/FLEX_QUERY_SETUP.md)**.
     *   Export as **XML**.
 2.  **Import to IBKR2KAP:** Open the Streamlit app in your browser, upload the XML file.
 3.  **Process:** Click "Run Tax Engine". The system will ingest the data, run the FIFO matching (both Asset and FX), and categorize the output.

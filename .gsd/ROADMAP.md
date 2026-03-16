@@ -43,6 +43,10 @@ All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` fo
 **Status**: ✅ Complete
 **Objective**: Enhance report generation to detect sell-trades lacking corresponding buy-trades. Display a list of these missing data points to the user and prompt for confirmation on whether to proceed with generating the report.
 
+### Phase 20: App Launch Options & Documentation
+**Status**: 🏃 In Progress
+**Objective**: Implement one-click app startup and OS taskbar/dock pinning capabilities (Windows Tauri executable, macOS Smart Launcher script). Cleanly handle Streamlit server shutdown. Document Flex Query setup.
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Advanced corporate action support (Spinoffs, Mergers).

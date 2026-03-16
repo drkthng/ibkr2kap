@@ -4,12 +4,12 @@
 > **Last Updated**: 2026-03-16
 
 ## Current Position
-- **Phase**: 19 (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Phase**: 20
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Phase 19 executed successfully. Enhanced `TaxAggregatorService` to detect unresolved short positions (missing cost-basis) and implemented a warning and acknowledgment flow in the Streamlit UI. Verified with new unit tests in `test_tax_aggregator.py`.
+Created execution plans for Phase 20 (App Launch Options & Documentation). Set up a native wrapper plan (pywebview) for Windows users and a bash/AppleScript launcher plan for macOS/technical users. Documented the Interactive Brokers Flex Query setup process.
 
 ## Next Steps
-1. Proceed to Milestone v2.0 or additional UI enhancements.
+1. /execute 20
