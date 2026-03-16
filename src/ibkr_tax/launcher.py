@@ -96,7 +96,8 @@ def main():
         )
         
         # Start the webview (this blocks until the window is closed)
-        webview.start()
+        # We explicitly use gui='qt' to use PySide6
+        webview.start(gui='qt')
         
     finally:
         print("Closing application...")
