@@ -58,12 +58,12 @@ Because IBKR2KAP processes sensitive financial data, it is designed to be run lo
 
 4.  **Start the UI:**
     ```bash
-    streamlit run src/ibkr_tax/main.py
+    streamlit run src/app.py
     ```
     
     > **Note on One-Click Launch:**
-    > - **Windows Users:** A standalone one-click executable wrapper (Tauri) is planned for easy launching without opening a terminal.
-    > - **macOS / Technical Users:** A smart launcher script will automatically activate the environment and start the app with a single click.
+    > - **Windows Users:** You can now use **`scripts/launch_windows.bat`**. Simply double-click it to start the app in a standalone window!
+    > - **macOS Users:** Run **`scripts/create_mac_app.command`** once to create a real `IBKR2KAP.app` on your Desktop.
 
 ## 📊 Usage
 

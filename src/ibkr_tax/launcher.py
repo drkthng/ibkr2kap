@@ -28,13 +28,16 @@ def main():
     else:
         streamlit_exe = os.path.join(venv_dir, 'bin', 'streamlit')
     
+    # The actual entry point is src/app.py
+    app_script = os.path.join(os.getcwd(), "src", "app.py")
+    
     # Base command
     cmd = []
     if os.path.exists(streamlit_exe):
-        cmd = [streamlit_exe, "run", "src/ibkr_tax/main.py"]
+        cmd = [streamlit_exe, "run", app_script]
     else:
         # Fallback to python -m streamlit
-        cmd = [python_exe, "-m", "streamlit", "run", "src/ibkr_tax/main.py"]
+        cmd = [python_exe, "-m", "streamlit", "run", app_script]
     
     # Append common arguments
     cmd += [
@@ -44,10 +47,19 @@ def main():
     ]
     
     print(f"Starting Streamlit server on port {port}...")
+    print(f"Command: {' '.join(cmd)}")
     
     # Start streamlit as a background process
-    # Using CREATE_NO_WINDOW on Windows to keep it hidden
-    kwargs = {}
+    # We capture stderr to a file for debugging
+    log_file = open("streamlit_server.log", "w")
+    
+    kwargs = {
+        'stderr': log_file,
+        'stdout': log_file,
+        'bufsize': 1,
+        'universal_newlines': True
+    }
+    
     if os.name == 'nt':
         kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
         
@@ -55,7 +67,7 @@ def main():
     
     # Wait for the server to start (polling)
     # We try to connect to the port until it succeeds or times out
-    max_retries = 30
+    max_retries = 60
     ready = False
     for i in range(max_retries):
         try:
@@ -94,6 +106,9 @@ def main():
             p.wait(timeout=5)
         except subprocess.TimeoutExpired:
             p.kill()
+        
+        # Close the log file
+        log_file.close()
 
 if __name__ == '__main__':
     main()
