@@ -40,7 +40,7 @@ All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` fo
 **Objective**: Update the final tax report generation to not only show the sell date for stock and currency gains/losses, but also include the original buy-date of the underlying position.
 
 ### Phase 19: Missing Cost-Basis Reporting & Prompts
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Enhance report generation to detect sell-trades lacking corresponding buy-trades. Display a list of these missing data points to the user and prompt for confirmation on whether to proceed with generating the report.
 
 ## Future Milestone: v2.0 (Planned)
