@@ -1,7 +1,8 @@
+from sqlalchemy import select, func, distinct
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
 
-from ibkr_tax.models.database import Account, Trade, CashTransaction, CorporateAction
+from ibkr_tax.models.database import Account, Trade, CashTransaction, CorporateAction, Gain
 from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, CorporateActionSchema
 
 
@@ -112,3 +113,43 @@ def import_corporate_actions(session: Session, actions: list[CorporateActionSche
             
     session.commit()
     return inserted
+
+
+def get_distinct_account_ids(session: Session) -> list[str]:
+    """Returns a sorted list of unique IBKR account IDs (string) in the DB."""
+    stmt = select(Account.account_id).order_by(Account.account_id)
+    results = session.execute(stmt).scalars().all()
+    return list(results)
+
+
+def get_tax_years_for_account(session: Session, account_identifier: str) -> list[int]:
+    """
+    Returns a sorted list of tax years (int, descending) that have data for the account.
+    Checks both the Gain table (realized trades) and CashTransaction table (dividends/interest).
+    """
+    # 1. Resolve internal account ID
+    stmt_acc = select(Account.id).where(Account.account_id == account_identifier)
+    account_db_id = session.execute(stmt_acc).scalar()
+
+    if account_db_id is None:
+        return []
+
+    # 2. Get years from Gains
+    stmt_gain_years = (
+        select(distinct(Gain.tax_year))
+        .join(Trade, Gain.sell_trade_id == Trade.id)
+        .where(Trade.account_id == account_db_id)
+    )
+    gain_years = set(session.execute(stmt_gain_years).scalars().all())
+
+    # 3. Get years from CashTransactions (using substr of settle_date YYYY-MM-DD)
+    stmt_cash_years = (
+        select(distinct(func.substr(CashTransaction.settle_date, 1, 4)))
+        .where(CashTransaction.account_id == account_db_id)
+    )
+    cash_years_raw = session.execute(stmt_cash_years).scalars().all()
+    cash_years = {int(y) for y in cash_years_raw if y}
+
+    # 4. Merge and sort
+    all_years = sorted(gain_years.union(cash_years), reverse=True)
+    return all_years

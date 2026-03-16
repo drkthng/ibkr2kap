@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 
 from ibkr_tax.models.database import Base, Account, Trade, CashTransaction
 from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema
-from ibkr_tax.db.repository import import_accounts, import_trades, import_cash_transactions
+from ibkr_tax.db.repository import (
+    import_accounts, import_trades, import_cash_transactions,
+    get_distinct_account_ids, get_tax_years_for_account
+)
 
 @pytest.fixture
 def session():
@@ -99,3 +102,60 @@ def test_import_cash_transactions(session):
     inserted2 = import_cash_transactions(session, [cash1, cash2])
     assert inserted2 == 0
     assert session.query(CashTransaction).count() == 2
+
+
+def test_get_distinct_account_ids(session):
+    # Empty
+    assert get_distinct_account_ids(session) == []
+
+    # Insert accounts
+    acc1 = AccountSchema(account_id="U123456", currency="EUR")
+    acc2 = AccountSchema(account_id="U789012", currency="USD")
+    import_accounts(session, [acc1, acc2])
+
+    assert get_distinct_account_ids(session) == ["U123456", "U789012"]
+
+
+def test_get_tax_years_for_account(session):
+    from ibkr_tax.models.database import Trade, Gain, FIFOLot, CashTransaction as DBCash
+    from datetime import date
+
+    # Unknown account
+    assert get_tax_years_for_account(session, "UNKNOWN") == []
+
+    # Setup account
+    acc_id = "U123456"
+    import_accounts(session, [AccountSchema(account_id=acc_id, currency="EUR")])
+    acc = session.query(Account).filter_by(account_id=acc_id).one()
+
+    # No data
+    assert get_tax_years_for_account(session, acc_id) == []
+
+    # Add CashTransaction in 2024
+    cash = DBCash(account_id=acc.id, description="DIV", date_time="2024-01-01 10:00:00", 
+                  settle_date="2024-01-05", amount=10, type="Dividends", currency="USD", 
+                  fx_rate_to_base=1.0, report_date="2024-01-01")
+    session.add(cash)
+
+    # Add Gain in 2023
+    # Need a trade and a lot
+    t = Trade(ib_trade_id="T1", account_id=acc.id, symbol="AAPL", asset_category="STK", 
+              description="Apple", trade_date="2023-12-01", settle_date="2023-12-05", 
+              currency="USD", fx_rate_to_base=1.0, quantity=-10, trade_price=150, 
+              proceeds=1500, buy_sell="SELL")
+    session.add(t)
+    session.flush()
+
+    lot = FIFOLot(trade_id=t.id, asset_category="STK", symbol="AAPL", settle_date="2023-12-01",
+                  original_quantity=10, remaining_quantity=0, cost_basis_total=1000, cost_basis_per_share=100)
+    session.add(lot)
+    session.flush()
+
+    g = Gain(sell_trade_id=t.id, buy_lot_id=lot.id, quantity_matched=10, tax_year=2023, 
+             proceeds=1500, cost_basis_matched=1000, realized_pnl=500, tax_pool="Aktien")
+    session.add(g)
+    session.commit()
+
+    # Should return [2024, 2023] sorted desc
+    years = get_tax_years_for_account(session, acc_id)
+    assert years == [2024, 2023]
