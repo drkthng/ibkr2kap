@@ -90,6 +90,7 @@ class TaxAggregatorService:
             .join(Trade, FIFOLot.trade_id == Trade.id)
             .where(Trade.account_id == account_db_id)
             .where(FIFOLot.remaining_quantity < 0)
+            .where(Trade.settle_date.like(f"{tax_year}%"))
         )
         missing_lots = self.session.execute(stmt_missing).scalars().all()
         warnings = []

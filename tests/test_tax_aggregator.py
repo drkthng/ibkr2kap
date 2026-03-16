@@ -106,26 +106,37 @@ def test_generate_report_with_missing_cost_basis(db_session):
     db_session.add(acc)
     db_session.commit()
 
-    # Create a trade and a corresponding FIFOLot with negative remaining_quantity
+    # Create a trade and a corresponding FIFOLot with negative remaining_quantity for 2024
     t1 = Trade(ib_trade_id="T1_MISSING", account_id=acc.id, symbol="TSLA", asset_category="STK", 
               description="Tesla Inc.", trade_date="2024-01-01", settle_date="2024-01-03", 
               currency="USD", fx_rate_to_base=Decimal("0.9"), quantity=Decimal("-10"), 
               trade_price=Decimal("200"), proceeds=Decimal("2000"), buy_sell="SELL")
-    db_session.add(t1)
+    
+    # Create another trade and lot for 2025 to ensure it is filtered out of the 2024 report
+    t2 = Trade(ib_trade_id="T2_MISSING", account_id=acc.id, symbol="AAPL", asset_category="STK", 
+              description="Apple Inc.", trade_date="2025-01-01", settle_date="2025-01-03", 
+              currency="USD", fx_rate_to_base=Decimal("0.9"), quantity=Decimal("-5"), 
+              trade_price=Decimal("200"), proceeds=Decimal("1000"), buy_sell="SELL")
+    db_session.add_all([t1, t2])
     db_session.commit()
 
-    lot = FIFOLot(trade_id=t1.id, asset_category="STK", symbol="TSLA", 
+    lot1 = FIFOLot(trade_id=t1.id, asset_category="STK", symbol="TSLA", 
                   settle_date="2024-01-03", original_quantity=Decimal("-10"), 
                   remaining_quantity=Decimal("-10"), cost_basis_total=Decimal("0"), 
                   cost_basis_per_share=Decimal("0"))
-    db_session.add(lot)
+    lot2 = FIFOLot(trade_id=t2.id, asset_category="STK", symbol="AAPL", 
+                  settle_date="2025-01-03", original_quantity=Decimal("-5"), 
+                  remaining_quantity=Decimal("-5"), cost_basis_total=Decimal("0"), 
+                  cost_basis_per_share=Decimal("0"))
+    db_session.add_all([lot1, lot2])
     db_session.commit()
 
-    # 2. Run Aggregator
+    # 2. Run Aggregator for 2024
     service = TaxAggregatorService(db_session)
     report = service.generate_report("U1111111", 2024)
 
     # 3. Assertions
+    # Should only return 1 warning for 2024, the 2025 one should be ignored
     assert len(report.missing_cost_basis_warnings) == 1
     assert "Missing cost basis for 10 shares of TSLA" in report.missing_cost_basis_warnings[0]
     assert "first sold on 2024-01-03" in report.missing_cost_basis_warnings[0]
