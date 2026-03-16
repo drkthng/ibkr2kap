@@ -28,11 +28,11 @@ All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` fo
 **Objective**: Detect unknown entities/models during Flex Query XML parsing and return formatted info-messages with the entity type and file location.
 
 ### Phase 16: Streamlit UI Configuration & DB Browser
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Remove the Streamlit top-right menu and "Deploy" button. Add a new tab/section to browse raw SQLite database tables.
 
 ### Phase 17: Dynamic Account & Tax Year Dropdowns
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Modify the "Anlage KAP Report" page to fetch distinct Account IDs from the database for the dropdown, and cascade the "Tax Year" dropdown based on the available data for the selected Account ID.
 
 ### Phase 18: Buy-Date Reporting for Gains/Losses

@@ -1,17 +1,15 @@
 # STATE.md
 
-> **Current Position**: Phase 17 Planned
+> **Current Position**: Phase 17 Complete
 > **Last Updated**: 2026-03-16
 
 ## Current Position
-- **Phase**: 17
-- **Task**: Planning complete
-- **Status**: Ready for execution
+- **Phase**: 17 (completed)
+- **Task**: All tasks complete
+- **Status**: Verified
 
 ## Last Session Summary
-Phase 17 planned with 2 plans across 2 waves:
-- Plan 17.1 (wave 1): Repository queries for dynamic dropdown data
-- Plan 17.2 (wave 2): Streamlit UI dynamic cascading selectboxes
+Phase 17 executed successfully. Dynamic cascading dropdowns for Account ID and Tax Year implemented in the Streamlit UI, powered by new database query functions in the repository layer. All tests passed.
 
 ## Next Steps
-1. /execute 17
+1. Proceed to Phase 18: Buy-Date Reporting for Gains/Losses
