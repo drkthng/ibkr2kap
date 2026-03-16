@@ -1,15 +1,15 @@
 # STATE.md
 
-> **Current Position**: Phase 17 Complete
+> **Current Position**: Phase 18 Planning Complete
 > **Last Updated**: 2026-03-16
 
 ## Current Position
-- **Phase**: 17 (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Phase**: 18 (planned)
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Phase 17 executed successfully. Dynamic cascading dropdowns for Account ID and Tax Year implemented in the Streamlit UI, powered by new database query functions in the repository layer. All tests passed.
+Phase 18 planned. 1 plan with 2 tasks created. Adds buy-date ("Anschaffungsdatum") column to the Gains Detail sheet in the Excel export. No schema changes needed — buy-date is resolved via Gain.buy_lot → FIFOLot.settle_date.
 
 ## Next Steps
-1. Proceed to Phase 18: Buy-Date Reporting for Gains/Losses
+1. /execute 18
