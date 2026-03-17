@@ -32,6 +32,8 @@
 - [x] Phase 24: Core Spinoff Support & FIFO Integration
 - [x] Phase 25: Reverse Split with Symbol/ISIN Rename (Consolidation)
 - [x] Phase 26: German Tax Theory Document & UI Guidance
+- [ ] Phase 27: Inter-Account Transfer Support (FIFO Lot Migration)
+- [ ] Phase 28: Manual Cost-Basis Entry UI (Missing Open Positions)
 
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
