@@ -227,7 +227,7 @@ class FlexXMLParser:
                         currency=ca_elem.get("currency"),
                         transaction_id=ca_elem.get("transactionID"),
                         description=description,
-                        tax_treatment="NEUTRAL_SPLIT" if action_type == "RS" else (
+                        tax_treatment="NEUTRAL_SPLIT" if action_type in ("RS", "FS") else (
                             "PENDING_REVIEW" if action_type == "SO" else "INFORMATIONAL"
                         )
                     )
@@ -237,6 +237,105 @@ class FlexXMLParser:
             pass
             
         return actions
+
+    def group_split_actions(self, actions: List[CorporateActionSchema]) -> List[CorporateActionSchema]:
+        """
+        Groups related RS/FS corporate action records into single logical split events.
+
+        IBKR represents a reverse split with symbol rename as multiple records:
+          - Negative qty records under OLD symbol (e.g., DEC.OLD) = shares removed
+          - Positive qty records under NEW symbol (e.g., DEC) = shares added
+
+        This function detects that pattern, computes the ratio, and returns a
+        single synthetic CorporateActionSchema with:
+          - symbol = new symbol
+          - parent_symbol = old symbol (for FIFOLot lookup)
+          - ratio derivable from description or computed from quantities
+          - quantity = net new quantity
+
+        Non-split actions (SO, RI, DW, DI, ED) are passed through unchanged.
+        """
+        from collections import defaultdict
+
+        split_types = {"RS", "FS"}
+        non_splits = [a for a in actions if a.action_type not in split_types]
+        splits = [a for a in actions if a.action_type in split_types]
+
+        if not splits:
+            return actions
+
+        # Group by (date, parent_symbol, action_type)
+        groups = defaultdict(list)
+        for s in splits:
+            # Use parent_symbol (extracted from description) as the grouping key
+            key = (s.date.isoformat(), s.parent_symbol or s.symbol, s.action_type)
+            groups[key].append(s)
+
+        grouped_results = []
+        for key, group in groups.items():
+            if len(group) == 1:
+                # Single record — simple split (no symbol rename)
+                grouped_results.append(group[0])
+                continue
+
+            # Multi-record split — detect old/new symbol pattern
+            positive_records = [r for r in group if r.quantity > 0]
+            negative_records = [r for r in group if r.quantity < 0]
+
+            if positive_records and negative_records:
+                # Symbol rename pattern detected
+                total_new = sum(r.quantity for r in positive_records)
+                total_old = sum(abs(r.quantity) for r in negative_records)
+
+                new_symbol = positive_records[0].symbol
+                old_symbol = negative_records[0].symbol
+
+                # Compute ratio: new / old (e.g., 2000/40000 = 0.05 for 1:20)
+                ratio = total_new / total_old if total_old != 0 else Decimal("1")
+
+                # Create synthetic grouped event using first positive record as base
+                base = positive_records[0]
+                grouped_results.append(
+                    CorporateActionSchema(
+                        account_id=base.account_id,
+                        symbol=new_symbol,
+                        parent_symbol=old_symbol,  # Old symbol for FIFOLot lookup
+                        action_type=base.action_type,
+                        date=base.date,
+                        report_date=base.report_date,
+                        quantity=total_new,
+                        value=base.value,
+                        isin=base.isin,
+                        currency=base.currency,
+                        transaction_id=base.transaction_id,
+                        description=base.description,
+                        tax_treatment="NEUTRAL_SPLIT",
+                    )
+                )
+            else:
+                # All same sign — no rename, just aggregate
+                # (e.g., multiple partial fill records for the same split)
+                total_qty = sum(r.quantity for r in group)
+                base = group[0]
+                grouped_results.append(
+                    CorporateActionSchema(
+                        account_id=base.account_id,
+                        symbol=base.symbol,
+                        parent_symbol=base.parent_symbol,
+                        action_type=base.action_type,
+                        date=base.date,
+                        report_date=base.report_date,
+                        quantity=total_qty,
+                        value=base.value,
+                        isin=base.isin,
+                        currency=base.currency,
+                        transaction_id=base.transaction_id,
+                        description=base.description,
+                        tax_treatment="NEUTRAL_SPLIT",
+                    )
+                )
+
+        return non_splits + grouped_results
 
     def get_unmapped_entities(self) -> List[Dict[str, str]]:
         """Identify entities in the XML that are not handled by the current version of the app."""

@@ -125,7 +125,7 @@ class CorporateActionSchema(BaseIBKRSchema):
     account_id: str | int = Field(...)
     symbol: str = Field(..., min_length=1)
     parent_symbol: str | None = None
-    action_type: Literal["SO", "RS", "RI", "DW", "DI", "ED"]
+    action_type: Literal["SO", "RS", "FS", "RI", "DW", "DI", "ED"]
     date: date
     report_date: date
     quantity: Decimal = Field(...)
