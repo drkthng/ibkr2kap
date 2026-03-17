@@ -239,6 +239,10 @@ class FlexXMLParser:
         return actions
 
     def group_split_actions(self, actions: List[CorporateActionSchema]) -> List[CorporateActionSchema]:
+        return FlexXMLParser._group_split_actions_static(actions)
+
+    @staticmethod
+    def _group_split_actions_static(actions: List[CorporateActionSchema]) -> List[CorporateActionSchema]:
         """
         Groups related RS/FS corporate action records into single logical split events.
 

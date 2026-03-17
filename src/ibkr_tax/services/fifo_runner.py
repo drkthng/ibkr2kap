@@ -33,23 +33,29 @@ class FIFORunner:
             select(CorporateAction)
             .where(CorporateAction.account_id == account_id)
         )
-        actions = self.session.execute(stmt_ca).scalars().all()
+        db_actions = self.session.execute(stmt_ca).scalars().all()
         
-        # 4. Interleave and sort by date. 
+        # 4. Convert DB models to schemas and group split actions
+        action_schemas = [CorporateActionSchema.model_validate(a) for a in db_actions]
+        
+        from ibkr_tax.services.flex_parser import FlexXMLParser
+        # Use the grouping function (it's a method but we can call it with a dummy instance
+        # or make it work standalone — for now we instantiate minimally)
+        grouped_actions = FlexXMLParser._group_split_actions_static(action_schemas)
+        
+        # 5. Interleave and sort by date. 
         # Trades use 'settle_date', Actions use 'date'.
-        # We'll use a consistent key: (date_str, type_priority, id)
-        # Type priority: Corporate Actions (0) before Trades (1) on the same date?
-        # Usually, a split happens at market open.
+        # Type priority: Corporate Actions (0) before Trades (1) on the same date.
         
         events = []
         for t in trades:
             events.append({"date": t.settle_date, "type": "trade", "obj": t, "id": t.id})
-        for a in actions:
-            events.append({"date": a.date, "type": "action", "obj": a, "id": a.id})
+        for idx, a in enumerate(grouped_actions):
+            events.append({"date": a.date.isoformat(), "type": "action", "obj": a, "id": idx})
             
         events.sort(key=lambda x: (x["date"], 0 if x["type"] == "action" else 1, x["id"]))
         
-        # 5. Process events
+        # 6. Process events
         fifo_engine = FIFOEngine(self.session)
         from ibkr_tax.services.corporate_actions import CorporateActionEngine
         ca_engine = CorporateActionEngine(self.session)
@@ -58,9 +64,7 @@ class FIFORunner:
             if event["type"] == "trade":
                 fifo_engine.process_trade(event["obj"])
             else:
-                # Convert DB model to Schema for the engine
-                action_schema = CorporateActionSchema.model_validate(event["obj"])
-                ca_engine.apply(action_schema)
+                ca_engine.apply(event["obj"])
         
         self.session.commit()
 
