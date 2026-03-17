@@ -1,7 +1,7 @@
 from sqlalchemy import delete
 from ibkr_tax.models.database import (
-    Trade, CashTransaction, FIFOLot, FXFIFOLot, 
-    FXGain, OptionEAE, OptionAdjustment
+    Trade, CashTransaction, FIFOLot, FXFIFOLot,
+    FXGain, Gain, CorporateAction
 )
 
 class MaintenanceService:
@@ -16,11 +16,11 @@ class MaintenanceService:
         Keeps Account metadata.
         """
         models_to_clear = [
+            Gain,
+            FXGain,
             FIFOLot,
             FXFIFOLot,
-            FXGain,
-            OptionAdjustment,
-            OptionEAE,
+            CorporateAction,
             Trade,
             CashTransaction
         ]
