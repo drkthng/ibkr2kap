@@ -48,25 +48,34 @@ class Trade(Base):
     gains: Mapped[List["Gain"]] = relationship(back_populates="sell_trade")
 
 class CorporateAction(Base):
-    """CorporateAction model tracking events like stock splits."""
+    """CorporateAction model tracking events like stock splits and spinoffs."""
     __tablename__ = "corporate_actions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     symbol: Mapped[str] = mapped_column(index=True)
-    action_type: Mapped[str] = mapped_column()  # e.g. StockSplit
+    parent_symbol: Mapped[str | None] = mapped_column(nullable=True)
+    action_type: Mapped[str] = mapped_column()  # SO, RS, RI, DW, DI, ED
     date: Mapped[str] = mapped_column(index=True)   # ISO date YYYY-MM-DD
-    ratio: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    report_date: Mapped[str] = mapped_column()      # ISO date YYYY-MM-DD
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    value: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
+    isin: Mapped[str | None] = mapped_column(nullable=True)
+    currency: Mapped[str] = mapped_column()
+    transaction_id: Mapped[str] = mapped_column(unique=True, index=True)
     description: Mapped[str] = mapped_column()
+    tax_treatment: Mapped[str] = mapped_column(default="PENDING_REVIEW")
 
     account: Mapped["Account"] = relationship(back_populates="corporate_actions")
+    fifo_lots: Mapped[List["FIFOLot"]] = relationship(back_populates="corporate_action")
 
 class FIFOLot(Base):
     """FIFOLot model tracking open units for FIFO matching."""
     __tablename__ = "fifo_lots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id"))
+    trade_id: Mapped[int | None] = mapped_column(ForeignKey("trades.id"), nullable=True)
+    corporate_action_id: Mapped[int | None] = mapped_column(ForeignKey("corporate_actions.id"), nullable=True)
     asset_category: Mapped[str] = mapped_column()
     symbol: Mapped[str] = mapped_column(index=True)
     settle_date: Mapped[str] = mapped_column(index=True)
@@ -76,6 +85,7 @@ class FIFOLot(Base):
     cost_basis_per_share: Mapped[Decimal] = mapped_column(Numeric(18, 4))
 
     trade: Mapped["Trade"] = relationship(back_populates="fifo_lots")
+    corporate_action: Mapped["CorporateAction"] = relationship(back_populates="fifo_lots")
     gains: Mapped[List["Gain"]] = relationship(back_populates="buy_lot")
 
 class Gain(Base):

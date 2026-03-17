@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, asc, delete
-from ibkr_tax.models.database import Account, Trade, FIFOLot, Gain
+from ibkr_tax.models.database import Account, Trade, FIFOLot, Gain, CorporateAction
 from ibkr_tax.services.fifo import FIFOEngine
+from ibkr_tax.schemas.ibkr import CorporateActionSchema
 
 class FIFORunner:
     def __init__(self, session: Session):
@@ -57,30 +58,32 @@ class FIFORunner:
             if event["type"] == "trade":
                 fifo_engine.process_trade(event["obj"])
             else:
-                ca_engine.apply_stock_split(event["obj"])
+                # Convert DB model to Schema for the engine
+                action_schema = CorporateActionSchema.model_validate(event["obj"])
+                ca_engine.apply(action_schema)
         
         self.session.commit()
 
     def _clear_fifo_data(self, account_id: int):
-        """Deletes all Gain and FIFOLot records associated with the account's trades."""
-        # Due to foreign keys, we delete Gains first
-        # Gains are linked to Sell trades. Sell trades are linked to Account.
-        
-        # Subquery to find trade IDs for this account
+        """Deletes all Gain and FIFOLot records associated with the account."""
+        # Delete Gains first
         trade_ids_stmt = select(Trade.id).where(Trade.account_id == account_id)
         trade_ids = self.session.execute(trade_ids_stmt).scalars().all()
         
-        if not trade_ids:
-            return
+        if trade_ids:
+            self.session.execute(
+                delete(Gain).where(Gain.sell_trade_id.in_(trade_ids))
+            )
+            self.session.execute(
+                delete(FIFOLot).where(FIFOLot.trade_id.in_(trade_ids))
+            )
 
-        # Delete Gains where sell_trade_id belongs to this account
-        self.session.execute(
-            delete(Gain).where(Gain.sell_trade_id.in_(trade_ids))
-        )
-        
-        # Delete FIFOLots where trade_id belongs to this account
-        self.session.execute(
-            delete(FIFOLot).where(FIFOLot.trade_id.in_(trade_ids))
-        )
+        # Also delete FIFOLots from corporate actions for this account
+        ca_ids_stmt = select(CorporateAction.id).where(CorporateAction.account_id == account_id)
+        ca_ids = self.session.execute(ca_ids_stmt).scalars().all()
+        if ca_ids:
+            self.session.execute(
+                delete(FIFOLot).where(FIFOLot.corporate_action_id.in_(ca_ids))
+            )
         
         self.session.flush()

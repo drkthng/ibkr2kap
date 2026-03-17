@@ -28,7 +28,11 @@
 - [x] Phase 22: UI and FX Bug Fixes
 - [x] Phase 23: Descriptive Warnings and Database Maintenance
 
+## Milestone v1.2: Advanced Corporate Actions & Compliance
+- [ ] Phase 24: Core Spinoff Support & FIFO Integration
+- [ ] Phase 25: Reverse Split with Symbol/ISIN Rename (Consolidation)
+- [ ] Phase 26: German Tax Theory Document & UI Guidance
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
-- [ ] Advanced corporate action support (Spinoffs, Mergers).
 - [ ] Real-time crypto portfolio tracking & FIFO matching.

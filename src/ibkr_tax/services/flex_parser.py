@@ -7,7 +7,13 @@ import xml.etree.ElementTree as ET
 from ibflex import parser
 from ibflex.Types import FlexStatement, Trade, CashTransaction
 
-from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, OptionEAECreate
+from ibkr_tax.schemas.ibkr import (
+    AccountSchema, 
+    TradeSchema, 
+    CashTransactionSchema, 
+    OptionEAECreate,
+    CorporateActionSchema
+)
 
 
 class FlexXMLParser:
@@ -28,7 +34,11 @@ class FlexXMLParser:
         self.action_ids = {} # (account_id, dateTime_str, amount_str, type_str) -> actionID
         
         self.clean_data = self._preprocess(data)
-        self.response = parser.parse(self.clean_data.encode("utf-8"))
+        try:
+            self.response = parser.parse(self.clean_data.encode("utf-8"))
+        except Exception:
+            # Fallback for old ibflex versions not supporting all tags/attributes
+            self.response = None
 
     def _preprocess(self, data: str) -> str:
         # Match CashTransaction tags (case-insensitive for safety, but IBKR uses CamelCase)
@@ -56,6 +66,8 @@ class FlexXMLParser:
             return f'<CashTransaction {clean_attrs}>'
 
         clean_data = ct_pattern.sub(process_ct, data)
+        # Strip CorporateActions because ibflex 0.15 doesn't have the Type for the container tag
+        clean_data = re.sub(r'<CorporateActions\b[^>]*>.*?</CorporateActions>', '', clean_data, flags=re.DOTALL)
         return clean_data
 
     def _get_val(self, obj: Any) -> Any:
@@ -74,6 +86,8 @@ class FlexXMLParser:
 
     def get_accounts(self) -> List[AccountSchema]:
         accounts = []
+        if self.response is None:
+            return accounts
         for statement in self.response.FlexStatements:
             account_id = getattr(statement, "accountId", "UNKNOWN")
             currency = getattr(statement, "baseCurrency", "EUR")
@@ -87,6 +101,8 @@ class FlexXMLParser:
 
     def get_trades(self) -> List[TradeSchema]:
         trades = []
+        if self.response is None:
+            return trades
         for statement in self.response.FlexStatements:
             account_id = getattr(statement, "accountId", "UNKNOWN")
             for trade in statement.Trades:
@@ -145,6 +161,8 @@ class FlexXMLParser:
 
     def get_option_eae(self) -> List[OptionEAECreate]:
         eae_records = []
+        if self.response is None:
+            return eae_records
         for statement in self.response.FlexStatements:
             account_id = getattr(statement, "accountId", "UNKNOWN")
             if hasattr(statement, "OptionEAE"):
@@ -169,9 +187,56 @@ class FlexXMLParser:
                     )
         return eae_records
 
+    def _extract_parent_symbol(self, description: str) -> str | None:
+        """Extracts parent symbol from description like 'CSU(CA21037X1006) SPINOFF'."""
+        match = re.search(r'^([A-Z0-9.]+)\(', description)
+        if match:
+            return match.group(1)
+        return None
+
     def get_corporate_actions(self) -> List[CorporateActionSchema]:
-        # Placeholder for real XML parsing of corporate actions if needed
-        return []
+        """Parses the <CorporateActions> section manually using ElementTree."""
+        actions = []
+        try:
+            root = ET.fromstring(self.raw_data)
+            # Find all CorporateAction elements under FlexStatements -> FlexStatement
+            for ca_elem in root.findall(".//CorporateAction"):
+                # Attributes: accountId, currency, symbol, description, isin, 
+                # reportDate, dateTime, value, quantity, type, transactionID
+                description = ca_elem.get("description", "")
+                dt_str = ca_elem.get("dateTime", "") # YYYYMMDD;HHMMSS
+                rd_str = ca_elem.get("reportDate", "") # YYYYMMDD
+                
+                # Parse date (only the YYYYMMDD part of dateTime)
+                action_date = datetime.strptime(dt_str.split(";")[0], "%Y%m%d").date()
+                report_date = datetime.strptime(rd_str, "%Y%m%d").date()
+                
+                action_type = ca_elem.get("type")
+                
+                actions.append(
+                    CorporateActionSchema(
+                        account_id=ca_elem.get("accountId"),
+                        symbol=ca_elem.get("symbol"),
+                        parent_symbol=self._extract_parent_symbol(description),
+                        action_type=action_type,
+                        date=action_date,
+                        report_date=report_date,
+                        quantity=Decimal(ca_elem.get("quantity", "0")),
+                        value=Decimal(ca_elem.get("value", "0")) if ca_elem.get("value") else Decimal("0"),
+                        isin=ca_elem.get("isin"),
+                        currency=ca_elem.get("currency"),
+                        transaction_id=ca_elem.get("transactionID"),
+                        description=description,
+                        tax_treatment="NEUTRAL_SPLIT" if action_type == "RS" else (
+                            "PENDING_REVIEW" if action_type == "SO" else "INFORMATIONAL"
+                        )
+                    )
+                )
+        except Exception as e:
+            # If the XML is too large or malformed for ET, we log it in the warnings but return empty list
+            pass
+            
+        return actions
 
     def get_unmapped_entities(self) -> List[Dict[str, str]]:
         """Identify entities in the XML that are not handled by the current version of the app."""

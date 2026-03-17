@@ -1,4 +1,5 @@
 from datetime import date
+import re
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -19,6 +20,7 @@ class BaseIBKRSchema(BaseModel):
     model_config = ConfigDict(
         str_strip_whitespace=True,
         strict=False,  # Allow coercion for strings to Decimal/date
+        from_attributes=True,
     )
 
     @field_validator("*", mode="before")
@@ -120,14 +122,46 @@ class OptionEAECreate(BaseIBKRSchema):
 
 
 class CorporateActionSchema(BaseIBKRSchema):
-    account_id: str = Field(..., min_length=1)
+    account_id: str | int = Field(...)
     symbol: str = Field(..., min_length=1)
-    action_type: Literal["StockSplit", "ReverseStockSplit"]
+    parent_symbol: str | None = None
+    action_type: Literal["SO", "RS", "RI", "DW", "DI", "ED"]
     date: date
-    ratio: Decimal = Field(..., gt=0)
+    report_date: date
+    quantity: Decimal = Field(...)
+    value: Decimal = Field(default=Decimal("0"))
+    isin: str | None = None
+    currency: str = Field(..., max_length=3)
+    transaction_id: str = Field(..., min_length=1)
     description: str
+    tax_treatment: Literal[
+        "PENDING_REVIEW",
+        "TAX_NEUTRAL_ABSPALTUNG",
+        "TAXABLE_SACHDIVIDENDE",
+        "NEUTRAL_SPLIT",
+        "INFORMATIONAL",
+    ] = "PENDING_REVIEW"
+
+    @property
+    def ratio(self) -> Decimal:
+        """Helper to derive ratio for stock splits/reverse splits from description."""
+        # Patterns like "4 FOR 1" or "1 FOR 10"
+        match = re.search(r'(\d+)\s+FOR\s+(\d+)', self.description, re.IGNORECASE)
+        if match:
+            new_val = Decimal(match.group(1))
+            old_val = Decimal(match.group(2))
+            if old_val != 0:
+                return new_val / old_val
+        
+        # Spinoffs often use "X FOR Y" too
+        if self.action_type == "SO" and self.quantity and self.parent_symbol:
+            # We handle spinoffs via quantity directly, but ratio might be useful
+            return Decimal("1") 
+
+        return Decimal("1")
 
     def to_db_dict(self) -> dict:
         data = self.model_dump(exclude={"account_id"})
         data["date"] = self.date.isoformat()
+        data["report_date"] = self.report_date.isoformat()
         return data

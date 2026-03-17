@@ -1,26 +1,20 @@
 import ibflex
+import ibflex.Types as T
 from ibflex import parser
-import os
-from decimal import Decimal
 
-xml_path = r"d:\Antigravity\IBKR2KAP\example\U7230673_20240101_20241231_AF_1434039_b9efd8fc4d9a876b70112f66fdb53969.xml"
+print("ibflex version:", getattr(ibflex, "__version__", "unknown"))
+print("Types in T:")
+for name in sorted(dir(T)):
+    if not name.startswith("__"):
+        print(f"  {name}")
 
+xml = """<FlexQueryResponse><FlexStatements><FlexStatement accountId="U1"><Trades /></FlexStatement></FlexStatements></FlexQueryResponse>"""
 try:
-    response = parser.parse(xml_path)
-    statement = response.FlexStatements[0]
-    print(f"Statement attributes: {[a for a in dir(statement) if not a.startswith('_')]}")
-    
-    if statement.Trades:
-        trade = statement.Trades[0]
-        print(f"Trade attributes: {[a for a in dir(trade) if not a.startswith('_')]}")
-        print(f"Trade symbol: {trade.symbol}")
-    
-    if statement.CashTransactions:
-        ct = statement.CashTransactions[0]
-        print(f"CashTransaction attributes: {[a for a in dir(ct) if not a.startswith('_')]}")
-        print(f"CT Type: {ct.type}")
-        # Let's see what attributes it DOES have for action/ID
-        print(f"CT attributes for ID: {[a for a in dir(ct) if 'ID' in a]}")
+    print("\nAttempting to parse minimal XML...")
+    response = parser.parse(xml.encode("utf-8"))
+    print("Response type:", type(response))
+    print("Response attributes:", [a for a in dir(response) if not a.startswith("_")])
 except Exception as e:
+    print("Error during parse:", e)
     import traceback
     traceback.print_exc()

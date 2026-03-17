@@ -98,12 +98,10 @@ def import_corporate_actions(session: Session, actions: list[CorporateActionSche
         ca_dict = action.to_db_dict()
         ca_dict['account_id'] = internal_acc_id
         
-        # Avoid exact duplicates
+        # Avoid exact duplicates using transaction_id
         existing = session.query(CorporateAction).filter_by(
             account_id=internal_acc_id,
-            symbol=ca_dict['symbol'],
-            date=ca_dict['date'],
-            action_type=ca_dict['action_type']
+            transaction_id=ca_dict['transaction_id']
         ).first()
         
         if not existing:

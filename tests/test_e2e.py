@@ -112,8 +112,10 @@ def test_full_multi_year_e2e(db_session, monkeypatch):
         ],
         "corporate_actions": [
             CorporateActionSchema(
-                account_id=account_id, symbol="AAPL", action_type="StockSplit", 
-                date=date(2024, 3, 1), ratio=Decimal("2"), description="2:1 Split"
+                account_id=account_id, symbol="AAPL", action_type="RS", 
+                date=date(2024, 3, 1), report_date=date(2024, 3, 1),
+                quantity=Decimal("100"), currency="USD", transaction_id="CA_SPLIT_1",
+                description="AAPL(US0378331005) SPLIT 2 FOR 1"
             )
         ]
     }
