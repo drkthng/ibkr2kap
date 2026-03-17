@@ -163,3 +163,72 @@ def test_maintenance_clears_manual_positions(db_session, account, manual_positio
 
     count = db_session.query(ManualPosition).count()
     assert count == 0
+
+
+# --- Integration tests (Plan 28.2) ---
+
+def test_add_manual_position_repository(db_session, account):
+    """Repository add + get functions should create and retrieve a ManualPosition."""
+    from ibkr_tax.db.repository import add_manual_position, get_manual_positions
+
+    mp = add_manual_position(
+        db_session, account.id,
+        symbol="MSFT", asset_category="STK",
+        quantity=Decimal("200"), acquisition_date="2019-06-15",
+        cost_basis_total_eur=Decimal("25000.0000"),
+        description="Test Entry",
+    )
+    assert mp.id is not None
+
+    positions = get_manual_positions(db_session, account.id)
+    assert len(positions) == 1
+    assert positions[0].symbol == "MSFT"
+    assert positions[0].quantity == Decimal("200")
+
+
+def test_delete_manual_position_repository(db_session, account):
+    """Repository delete should remove the ManualPosition."""
+    from ibkr_tax.db.repository import add_manual_position, delete_manual_position, get_manual_positions
+
+    mp = add_manual_position(
+        db_session, account.id,
+        symbol="GOOG", asset_category="STK",
+        quantity=Decimal("10"), acquisition_date="2018-01-10",
+        cost_basis_total_eur=Decimal("10000.0000"),
+    )
+    assert delete_manual_position(db_session, mp.id) is True
+    assert get_manual_positions(db_session, account.id) == []
+
+
+def test_manual_position_eliminates_warning(db_session, account, manual_position):
+    """A ManualPosition should prevent the 'missing cost basis' warning for covered sells."""
+    # Sell 50 AAPL — but manual_position covers 100, so NO warning expected
+    sell = Trade(
+        ib_trade_id="SELL_WARN",
+        account_id=account.id,
+        asset_category="STK",
+        symbol="AAPL",
+        description="Apple Sell",
+        trade_date="2023-03-01",
+        settle_date="2023-03-03",
+        currency="EUR",
+        fx_rate_to_base=Decimal("1.0"),
+        quantity=Decimal("-50"),
+        trade_price=Decimal("170"),
+        proceeds=Decimal("8500"),
+        ib_commission=Decimal("-5"),
+        taxes=Decimal("0"),
+        buy_sell="SELL",
+    )
+    db_session.add(sell)
+    db_session.flush()
+
+    # Run FIFO to match sell against manual position
+    runner = FIFORunner(db_session)
+    runner.run_for_account(account.id)
+
+    # Generate tax report — should have no missing cost basis warnings
+    from ibkr_tax.services.tax_aggregator import TaxAggregatorService
+    aggregator = TaxAggregatorService(db_session)
+    report = aggregator.generate_report("U999", 2023)
+    assert report.missing_cost_basis_warnings == []
