@@ -70,3 +70,6 @@ venv.bak/
 
 # Example files
 example/
+
+# Streamlit server log
+streamlit_server.log
