@@ -18,6 +18,7 @@ class Account(Base):
     trades: Mapped[List["Trade"]] = relationship(back_populates="account")
     cash_transactions: Mapped[List["CashTransaction"]] = relationship(back_populates="account")
     corporate_actions: Mapped[List["CorporateAction"]] = relationship(back_populates="account")
+    transfers: Mapped[List["Transfer"]] = relationship(back_populates="account")
     fx_fifo_lots: Mapped[List["FXFIFOLot"]] = relationship(back_populates="account")
     fx_gains: Mapped[List["FXGain"]] = relationship(back_populates="account")
 
@@ -69,6 +70,35 @@ class CorporateAction(Base):
     account: Mapped["Account"] = relationship(back_populates="corporate_actions")
     fifo_lots: Mapped[List["FIFOLot"]] = relationship(back_populates="corporate_action")
 
+class Transfer(Base):
+    """Transfer model tracking inter-account position and cash transfers."""
+    __tablename__ = "transfers"
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id", "symbol", "transfer_date", "direction", "quantity",
+            name="uq_transfer_identity"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    symbol: Mapped[str] = mapped_column(index=True)
+    description: Mapped[str] = mapped_column()
+    currency: Mapped[str] = mapped_column()
+    fx_rate_to_base: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    transfer_type: Mapped[str] = mapped_column()  # INTERNAL
+    direction: Mapped[str] = mapped_column()  # IN, OUT, -
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    transfer_date: Mapped[str] = mapped_column(index=True)  # ISO date
+    settle_date: Mapped[str] = mapped_column()
+    counterparty_account: Mapped[str] = mapped_column()  # Other account ID string
+    position_amount: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=0)
+    position_amount_in_base: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=0)
+    cash_transfer: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
+    isin: Mapped[str | None] = mapped_column(nullable=True)
+
+    account: Mapped["Account"] = relationship(back_populates="transfers")
+
 class FIFOLot(Base):
     """FIFOLot model tracking open units for FIFO matching."""
     __tablename__ = "fifo_lots"
@@ -76,6 +106,7 @@ class FIFOLot(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     trade_id: Mapped[int | None] = mapped_column(ForeignKey("trades.id"), nullable=True)
     corporate_action_id: Mapped[int | None] = mapped_column(ForeignKey("corporate_actions.id"), nullable=True)
+    transfer_id: Mapped[int | None] = mapped_column(ForeignKey("transfers.id"), nullable=True)
     asset_category: Mapped[str] = mapped_column()
     symbol: Mapped[str] = mapped_column(index=True)
     settle_date: Mapped[str] = mapped_column(index=True)
@@ -86,6 +117,7 @@ class FIFOLot(Base):
 
     trade: Mapped["Trade"] = relationship(back_populates="fifo_lots")
     corporate_action: Mapped["CorporateAction"] = relationship(back_populates="fifo_lots")
+    transfer: Mapped["Transfer"] = relationship()
     gains: Mapped[List["Gain"]] = relationship(back_populates="buy_lot")
 
 class Gain(Base):

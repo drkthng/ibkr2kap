@@ -12,7 +12,8 @@ from ibkr_tax.schemas.ibkr import (
     TradeSchema, 
     CashTransactionSchema, 
     OptionEAECreate,
-    CorporateActionSchema
+    CorporateActionSchema,
+    TransferSchema
 )
 
 
@@ -385,7 +386,8 @@ class FlexXMLParser:
         ignored_tags = {
             "FlexStatementDetails", "EquitySummaryByReportDate", "TransferSignals",
             "ChangeInDividendAccrual", "OpenPositions", "SecurityInfo", 
-            "ConversionRates", "CFDCharges", "PriorPeriodPositions"
+            "ConversionRates", "CFDCharges", "PriorPeriodPositions",
+            "Transfers",  # Handled by get_transfers() via raw ElementTree
         }
 
         try:
@@ -414,6 +416,50 @@ class FlexXMLParser:
         
         return warnings
 
+    def get_transfers(self) -> List[TransferSchema]:
+        """Parses the <Transfers> section manually using ElementTree."""
+        transfers = []
+        try:
+            root = ET.fromstring(self.raw_data)
+            for transfer_elem in root.findall(".//Transfer"):
+                dt_str = transfer_elem.get("dateTime", "")
+                settle_str = transfer_elem.get("settleDate", "")
+
+                transfer_date = datetime.strptime(dt_str.split(";")[0], "%Y%m%d").date()
+                settle_date = datetime.strptime(settle_str, "%Y%m%d").date()
+
+                direction = transfer_elem.get("direction", "-")
+                # Normalize empty direction to "-"
+                if not direction or direction.strip() == "":
+                    direction = "-"
+
+                quantity_str = transfer_elem.get("quantity", "0")
+                fx_rate_str = transfer_elem.get("fxRateToBase", "1")
+
+                transfers.append(
+                    TransferSchema(
+                        account_id=transfer_elem.get("accountId", "UNKNOWN"),
+                        symbol=transfer_elem.get("symbol", "--"),
+                        description=transfer_elem.get("description", ""),
+                        currency=transfer_elem.get("currency", "EUR"),
+                        fx_rate_to_base=Decimal(fx_rate_str),
+                        transfer_type=transfer_elem.get("type", "INTERNAL"),
+                        direction=direction,
+                        quantity=Decimal(quantity_str),
+                        transfer_date=transfer_date,
+                        settle_date=settle_date,
+                        counterparty_account=transfer_elem.get("account", ""),
+                        position_amount=Decimal(transfer_elem.get("positionAmount", "0")),
+                        position_amount_in_base=Decimal(transfer_elem.get("positionAmountInBase", "0")),
+                        cash_transfer=Decimal(transfer_elem.get("cashTransfer", "0")),
+                        isin=transfer_elem.get("isin") or None,
+                    )
+                )
+        except Exception:
+            pass
+
+        return transfers
+
     def parse_all(self):
         return {
             "accounts": self.get_accounts(),
@@ -421,5 +467,6 @@ class FlexXMLParser:
             "cash_transactions": self.get_cash_transactions(),
             "option_eae": self.get_option_eae(),
             "corporate_actions": self.get_corporate_actions(),
+            "transfers": self.get_transfers(),
             "warnings": self.get_unmapped_entities(),
         }

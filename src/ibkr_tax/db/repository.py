@@ -2,8 +2,8 @@ from sqlalchemy import select, func, distinct
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
 
-from ibkr_tax.models.database import Account, Trade, CashTransaction, CorporateAction, Gain
-from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, CorporateActionSchema
+from ibkr_tax.models.database import Account, Trade, CashTransaction, CorporateAction, Transfer, Gain
+from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, CorporateActionSchema, TransferSchema
 
 
 def import_accounts(session: Session, accounts: list[AccountSchema]) -> int:
@@ -109,6 +109,41 @@ def import_corporate_actions(session: Session, actions: list[CorporateActionSche
             session.add(new_ca)
             inserted += 1
             
+    session.commit()
+    return inserted
+
+
+def import_transfers(session: Session, transfers: list[TransferSchema]) -> int:
+    """Inserts transfers into the DB. Avoids duplicates via UniqueConstraint fields."""
+    if not transfers:
+        return 0
+
+    account_map = {acc.account_id: acc.id for acc in session.query(Account).all()}
+
+    inserted = 0
+    for transfer in transfers:
+        if transfer.account_id not in account_map:
+            # Skip transfers for accounts not in DB (e.g., counterparty not imported)
+            continue
+
+        internal_acc_id = account_map[transfer.account_id]
+        t_dict = transfer.to_db_dict()
+        t_dict['account_id'] = internal_acc_id
+
+        # Check for existing transfer using the unique constraint fields
+        existing = session.query(Transfer).filter_by(
+            account_id=internal_acc_id,
+            symbol=t_dict['symbol'],
+            transfer_date=t_dict['transfer_date'],
+            direction=t_dict['direction'],
+            quantity=t_dict['quantity'],
+        ).first()
+
+        if not existing:
+            new_transfer = Transfer(**t_dict)
+            session.add(new_transfer)
+            inserted += 1
+
     session.commit()
     return inserted
 

@@ -8,7 +8,8 @@ from ibkr_tax.db.repository import (
     import_accounts, 
     import_trades, 
     import_cash_transactions,
-    import_corporate_actions
+    import_corporate_actions,
+    import_transfers
 )
 
 
@@ -39,12 +40,14 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
     cash_txs = parsed_data["cash_transactions"]
     option_eae = parsed_data.get("option_eae", [])
     corporate_actions = parsed_data.get("corporate_actions", [])
+    transfers = parsed_data.get("transfers", [])
 
     # 1. Insert into database using repository functions
     import_accounts(session, accounts)
     import_trades(session, trades)
     import_cash_transactions(session, cash_txs)
     import_corporate_actions(session, corporate_actions)
+    import_transfers(session, transfers)
     
     # 2. Re-run engines to handle adjustments
     from ibkr_tax.services.fifo_runner import FIFORunner
@@ -83,7 +86,8 @@ def run_import(file_path: str, session: Session, file_type: str = "xml") -> Dict
             "accounts": {"parsed": len(accounts)},
             "trades": {"parsed": len(trades)},
             "cash_transactions": {"parsed": len(cash_txs)},
-            "option_eae": {"parsed": len(option_eae)}
+            "option_eae": {"parsed": len(option_eae)},
+            "transfers": {"parsed": len(transfers)}
         },
         "warnings": parsed_data.get("warnings", [])
     }

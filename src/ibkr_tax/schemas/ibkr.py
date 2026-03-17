@@ -165,3 +165,33 @@ class CorporateActionSchema(BaseIBKRSchema):
         data["date"] = self.date.isoformat()
         data["report_date"] = self.report_date.isoformat()
         return data
+
+
+class TransferSchema(BaseIBKRSchema):
+    """Schema for inter-account transfer records from IBKR Flex Query XML."""
+    account_id: str = Field(..., min_length=1)
+    symbol: str = Field(...)  # "--" for cash-only transfers
+    description: str
+    currency: str = Field(..., max_length=3)
+    fx_rate_to_base: Decimal = Field(..., gt=0)
+    transfer_type: Literal["INTERNAL"] = "INTERNAL"
+    direction: Literal["IN", "OUT", "-"]
+    quantity: Decimal = Field(default=Decimal("0"))
+    transfer_date: date
+    settle_date: date
+    counterparty_account: str  # The other account in the transfer
+    position_amount: Decimal = Field(default=Decimal("0"))  # Cost basis in trade currency
+    position_amount_in_base: Decimal = Field(default=Decimal("0"))  # Cost basis in EUR
+    cash_transfer: Decimal = Field(default=Decimal("0"))  # Cash amount (0 for stock)
+    isin: str | None = None
+
+    @property
+    def is_stock_transfer(self) -> bool:
+        """True when this is a stock position transfer (not cash-only)."""
+        return self.quantity != 0 and self.symbol != "--"
+
+    def to_db_dict(self) -> dict:
+        data = self.model_dump(exclude={"account_id"})
+        data["transfer_date"] = self.transfer_date.isoformat()
+        data["settle_date"] = self.settle_date.isoformat()
+        return data
