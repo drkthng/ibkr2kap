@@ -1,15 +1,17 @@
 # STATE.md
 
-> **Current Position**: Milestone v1.2 Complete
+> **Current Position**: Phase 27 Planned
 > **Last Updated**: 2026-03-17
 
 ## Current Position
-- **Phase**: 26 (all v1.2 phases complete)
-- **Task**: Milestone v1.2 finalized
-- **Status**: Verified — 86 tests passing
+- **Phase**: 27
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-Verified all Milestone v1.2 phases (24, 25, 26) are correctly implemented. Full test suite — 86 tests, 0 failures, 1 warning (SQLAlchemy identity map, cosmetic). ROADMAP.md updated to mark Phase 24 and Phase 25 as complete.
+Created 2 execution plans for Phase 27 (Inter-Account Transfer Support):
+- Plan 27.1 (wave 1): Transfer schema, parser, DB model, repository import
+- Plan 27.2 (wave 2): FIFO lot migration engine, pipeline integration, tests
 
 ## Next Steps
-1. Define Milestone v2.0 or add new phases
+1. /execute 27
