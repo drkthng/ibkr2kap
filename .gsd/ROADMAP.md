@@ -31,7 +31,7 @@
 ## Milestone v1.2: Advanced Corporate Actions & Compliance
 - [ ] Phase 24: Core Spinoff Support & FIFO Integration
 - [ ] Phase 25: Reverse Split with Symbol/ISIN Rename (Consolidation)
-- [ ] Phase 26: German Tax Theory Document & UI Guidance
+- [x] Phase 26: German Tax Theory Document & UI Guidance
 
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
