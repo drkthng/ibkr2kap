@@ -1,16 +1,17 @@
 import streamlit as st
 import tempfile
 import os
-from sqlalchemy.orm import Session
 from ibkr_tax.db.engine import get_engine, get_session
-from ibkr_tax.models.database import Base
 from ibkr_tax.services.pipeline import run_import
 from ibkr_tax.services.fifo_runner import FIFORunner
 from ibkr_tax.services.tax_aggregator import TaxAggregatorService
 from ibkr_tax.services.maintenance import MaintenanceService
 from ibkr_tax.services.excel_export import ExcelExportService
-from ibkr_tax.db.repository import get_distinct_account_ids, get_tax_years_for_account
+from ibkr_tax.db.repository import get_distinct_account_ids, get_tax_years_for_account, get_manual_positions, add_manual_position, delete_manual_position
 from ibkr_tax.services.tax_tooltips import KAP_TOOLTIPS, TAX_POOL_EXPLANATIONS
+from ibkr_tax.models.database import Base, Account
+from decimal import Decimal
+import pandas as pd
 
 # --- Page Config ---
 st.set_page_config(
@@ -49,7 +50,7 @@ st.sidebar.info("Local-first tax assistant for German IBKR users.")
 # --- Main UI ---
 st.title("🛡️ IBKR2KAP — Tax Reporting")
 
-tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📊 Anlage KAP Report", "🗄️ Database Browser", "📖 Tax Guide"])
+tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📝 Manual Positions", "📊 Anlage KAP Report", "🗄️ Database Browser", "📖 Tax Guide"])
 
 # --- Tab 1: Data Import ---
 with tabs[0]:
@@ -150,8 +151,118 @@ with tabs[1]:
             except Exception as e:
                 st.error(f"Error running FIFO: {e}")
 
-# --- Tab 3: Anlage KAP Report (Placeholder for Plan 12.2) ---
+# --- Tab 3: Manual Positions ---
 with tabs[2]:
+    st.header("📝 Manual Cost-Basis Entry")
+    st.markdown("""
+    If you sold positions that were **acquired before your XML data range**, they will appear as
+    "Missing Cost Basis" warnings in the Anlage KAP report.
+
+    Use this form to provide the **acquisition date** and **cost basis** for those positions.
+    After adding entries, **re-run the FIFO Engine** in the Tax Processing tab.
+    """)
+
+    with SessionLocal() as session:
+        mp_accounts = get_distinct_account_ids(session)
+
+    if not mp_accounts:
+        st.info("No accounts found. Import IBKR data first.")
+    else:
+        mp_account_id = st.selectbox("Account", options=mp_accounts, key="mp_account_select")
+
+        # Resolve internal DB id
+        with SessionLocal() as session:
+            from sqlalchemy import select
+            mp_acc_db_id = session.execute(
+                select(Account.id).where(Account.account_id == mp_account_id)
+            ).scalar()
+
+        if mp_acc_db_id is None:
+            st.error("Account not found in database.")
+        else:
+            # --- Show existing manual positions ---
+            with SessionLocal() as session:
+                positions = get_manual_positions(session, mp_acc_db_id)
+
+            if positions:
+                st.subheader(f"Existing Manual Positions ({len(positions)})")
+                rows = []
+                for p in positions:
+                    rows.append({
+                        "ID": p.id,
+                        "Symbol": p.symbol,
+                        "Category": p.asset_category,
+                        "Quantity": float(p.quantity),
+                        "Acquisition Date": p.acquisition_date,
+                        "Cost Basis (EUR)": float(p.cost_basis_total_eur),
+                        "Description": p.description,
+                    })
+                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+                # Delete section
+                with st.expander("🗑️ Delete a Manual Position"):
+                    del_id = st.selectbox(
+                        "Select position to delete",
+                        options=[p.id for p in positions],
+                        format_func=lambda pid: next(
+                            f"{p.symbol} — {p.quantity} @ {p.acquisition_date}" for p in positions if p.id == pid
+                        ),
+                        key="mp_delete_select",
+                    )
+                    if st.button("🗑️ Delete Selected Position", key="mp_delete_btn"):
+                        with SessionLocal() as session:
+                            deleted = delete_manual_position(session, del_id)
+                        if deleted:
+                            st.success("Position deleted. Re-run the FIFO Engine to update results.")
+                            st.rerun()
+                        else:
+                            st.error("Could not find position to delete.")
+            else:
+                st.info("No manual positions for this account yet.")
+
+            # --- Add form ---
+            st.divider()
+            st.subheader("Add New Manual Position")
+            with st.form("add_manual_position_form", clear_on_submit=True):
+                col_sym, col_cat = st.columns(2)
+                with col_sym:
+                    mp_symbol = st.text_input("Symbol (e.g. AAPL)", key="mp_symbol")
+                with col_cat:
+                    mp_asset_cat = st.selectbox("Asset Category", ["STK", "OPT", "FUT", "WAR"], key="mp_asset_cat")
+
+                col_qty, col_date = st.columns(2)
+                with col_qty:
+                    mp_qty = st.number_input("Quantity", min_value=0.0001, step=1.0, format="%.4f", key="mp_qty")
+                with col_date:
+                    mp_date = st.date_input("Acquisition Date (Settlement)", key="mp_date")
+
+                col_cost, col_desc = st.columns(2)
+                with col_cost:
+                    mp_cost = st.number_input("Total Cost Basis in EUR", min_value=0.01, step=0.01, key="mp_cost")
+                with col_desc:
+                    mp_desc = st.text_input("Description", value="Manual Opening Position", key="mp_desc")
+
+                submitted = st.form_submit_button("➕ Add Manual Position")
+                if submitted:
+                    if not mp_symbol.strip():
+                        st.error("Symbol is required.")
+                    else:
+                        with SessionLocal() as session:
+                            add_manual_position(
+                                session,
+                                mp_acc_db_id,
+                                symbol=mp_symbol.strip().upper(),
+                                asset_category=mp_asset_cat,
+                                quantity=Decimal(str(mp_qty)),
+                                acquisition_date=mp_date.isoformat(),
+                                cost_basis_total_eur=Decimal(str(mp_cost)),
+                                description=mp_desc or "Manual Opening Position",
+                            )
+                        st.success(f"Added {mp_qty} {mp_symbol.upper()} @ {mp_cost:.2f} EUR. Re-run FIFO Engine to include.")
+                        st.rerun()
+
+# --- Tab 4: Anlage KAP Report ---
+with tabs[3]:
     st.header("Anlage KAP Generation")
     st.markdown("Generate the final tax report figures for a specific account and year.")
     # Fetch available accounts
@@ -191,7 +302,7 @@ with tabs[2]:
                             for warning in report.missing_cost_basis_warnings:
                                 st.write(f"- {warning}")
                             
-                            st.info("💡 To fix this, you may need to import historical data from previous years or manually adjust lots.")
+                            st.info("💡 You can provide cost basis for these positions in the **📝 Manual Positions** tab, then re-run the FIFO Engine.")
                             
                             if not st.checkbox("Generate report anyway despite missing data"):
                                 can_show_report = False
@@ -245,9 +356,8 @@ with tabs[2]:
                 except Exception as e:
                     st.error(f"Error generating report: {e}")
 
-# --- Tab 4: Database Browser ---
-with tabs[3]:
-    import pandas as pd
+# --- Tab 5: Database Browser ---
+with tabs[4]:
     st.header("🗄️ Database Browser")
     st.markdown("Inspect raw data directly from the SQLite database.")
     
@@ -279,8 +389,8 @@ with tabs[3]:
     except Exception as e:
         st.error(f"Error browsing database: {e}")
 
-# --- Tab 5: Tax Guide ---
-with tabs[4]:
+# --- Tab 6: Tax Guide ---
+with tabs[5]:
     st.header("📖 German Tax Guide for IBKR Users")
     st.markdown(
         "Dieses Handbuch erklärt, wie IBKR2KAP Ihre Trades den Zeilen der "
