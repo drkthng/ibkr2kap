@@ -19,6 +19,7 @@ class Account(Base):
     cash_transactions: Mapped[List["CashTransaction"]] = relationship(back_populates="account")
     corporate_actions: Mapped[List["CorporateAction"]] = relationship(back_populates="account")
     transfers: Mapped[List["Transfer"]] = relationship(back_populates="account")
+    manual_positions: Mapped[List["ManualPosition"]] = relationship(back_populates="account")
     fx_fifo_lots: Mapped[List["FXFIFOLot"]] = relationship(back_populates="account")
     fx_gains: Mapped[List["FXGain"]] = relationship(back_populates="account")
 
@@ -99,6 +100,21 @@ class Transfer(Base):
 
     account: Mapped["Account"] = relationship(back_populates="transfers")
 
+class ManualPosition(Base):
+    """ManualPosition model for user-provided opening positions (cost basis for pre-XML holdings)."""
+    __tablename__ = "manual_positions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    symbol: Mapped[str] = mapped_column(index=True)
+    asset_category: Mapped[str] = mapped_column()  # STK, OPT, etc.
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    acquisition_date: Mapped[str] = mapped_column()  # ISO date YYYY-MM-DD (Settlement)
+    cost_basis_total_eur: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    description: Mapped[str] = mapped_column(default="Manual Opening Position")
+
+    account: Mapped["Account"] = relationship(back_populates="manual_positions")
+
 class FIFOLot(Base):
     """FIFOLot model tracking open units for FIFO matching."""
     __tablename__ = "fifo_lots"
@@ -107,6 +123,7 @@ class FIFOLot(Base):
     trade_id: Mapped[int | None] = mapped_column(ForeignKey("trades.id"), nullable=True)
     corporate_action_id: Mapped[int | None] = mapped_column(ForeignKey("corporate_actions.id"), nullable=True)
     transfer_id: Mapped[int | None] = mapped_column(ForeignKey("transfers.id"), nullable=True)
+    manual_position_id: Mapped[int | None] = mapped_column(ForeignKey("manual_positions.id"), nullable=True)
     asset_category: Mapped[str] = mapped_column()
     symbol: Mapped[str] = mapped_column(index=True)
     settle_date: Mapped[str] = mapped_column(index=True)
@@ -118,6 +135,7 @@ class FIFOLot(Base):
     trade: Mapped["Trade"] = relationship(back_populates="fifo_lots")
     corporate_action: Mapped["CorporateAction"] = relationship(back_populates="fifo_lots")
     transfer: Mapped["Transfer"] = relationship()
+    manual_position: Mapped["ManualPosition"] = relationship()
     gains: Mapped[List["Gain"]] = relationship(back_populates="buy_lot")
 
 class Gain(Base):
