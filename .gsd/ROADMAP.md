@@ -29,8 +29,8 @@
 - [x] Phase 23: Descriptive Warnings and Database Maintenance
 
 ## Milestone v1.2: Advanced Corporate Actions & Compliance
-- [ ] Phase 24: Core Spinoff Support & FIFO Integration
-- [ ] Phase 25: Reverse Split with Symbol/ISIN Rename (Consolidation)
+- [x] Phase 24: Core Spinoff Support & FIFO Integration
+- [x] Phase 25: Reverse Split with Symbol/ISIN Rename (Consolidation)
 - [x] Phase 26: German Tax Theory Document & UI Guidance
 
 ## Future Milestone: v2.0 (Planned)
