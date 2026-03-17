@@ -10,6 +10,7 @@ from ibkr_tax.services.tax_aggregator import TaxAggregatorService
 from ibkr_tax.services.maintenance import MaintenanceService
 from ibkr_tax.services.excel_export import ExcelExportService
 from ibkr_tax.db.repository import get_distinct_account_ids, get_tax_years_for_account
+from ibkr_tax.services.tax_tooltips import KAP_TOOLTIPS, TAX_POOL_EXPLANATIONS
 
 # --- Page Config ---
 st.set_page_config(
@@ -48,7 +49,7 @@ st.sidebar.info("Local-first tax assistant for German IBKR users.")
 # --- Main UI ---
 st.title("🛡️ IBKR2KAP — Tax Reporting")
 
-tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📊 Anlage KAP Report", "🗄️ Database Browser"])
+tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📊 Anlage KAP Report", "🗄️ Database Browser", "📖 Tax Guide"])
 
 # --- Tab 1: Data Import ---
 with tabs[0]:
@@ -199,14 +200,27 @@ with tabs[2]:
                             # Display Metrics
                             st.subheader(f"Report Summary for {account_id} ({tax_year})")
                             m1, m2, m3 = st.columns(3)
-                            m1.metric("KAP Line 7 (Kapitalerträge)", f"{report.kap_line_7_kapitalertraege:,.2f} €")
-                            m2.metric("KAP Line 8 (Gewinne Aktien)", f"{report.kap_line_8_gewinne_aktien:,.2f} €")
-                            m3.metric("KAP Line 9 (Verluste Aktien)", f"{report.kap_line_9_verluste_aktien:,.2f} €")
+                            m1.metric("KAP Line 7 (Kapitalerträge)", f"{report.kap_line_7_kapitalertraege:,.2f} €", help=KAP_TOOLTIPS["kap_line_7"])
+                            m2.metric("KAP Line 8 (Gewinne Aktien)", f"{report.kap_line_8_gewinne_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_8"])
+                            m3.metric("KAP Line 9 (Verluste Aktien)", f"{report.kap_line_9_verluste_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_9"])
                             
                             m4, m5, m6 = st.columns(3)
-                            m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €")
-                            m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €")
-                            m6.metric("Total Realized PnL", f"{report.total_realized_pnl:,.2f} €")
+                            m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €", help=KAP_TOOLTIPS["kap_line_10"])
+                            m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €", help=KAP_TOOLTIPS["kap_line_15"])
+                            m6.metric("Total Realized PnL", f"{report.total_realized_pnl:,.2f} €", help=KAP_TOOLTIPS["total_realized_pnl"])
+                            
+                            with st.expander("ℹ️ Was bedeuten diese Zeilen?"):
+                                st.markdown(
+                                    "| Zeile | Bezeichnung | Erklärung |\n"
+                                    "|---|---|---|\n"
+                                    "| **7** | Kapitalerträge | Dividenden, Zinsen und sonstige Gewinne (ETFs, Anleihen) |\n"
+                                    "| **8** | Gewinne Aktien | Nur positive Gewinne aus Einzelaktien-Verkäufen |\n"
+                                    "| **9** | Verluste Aktien | Aktienverluste (Absolutwert) — nur mit Aktiengewinnen verrechenbar |\n"
+                                    "| **10** | Termingeschäfte | Netto-Ergebnis aus Optionen und Futures |\n"
+                                    "| **15** | Quellensteuer | Ausländische Steuern — anrechenbar auf die deutsche Steuer |\n"
+                                    "\n"
+                                    '> 📖 Ausführliche Erklärungen finden Sie im Tab **"Tax Guide"** und in der Datei `docs/GERMAN_TAX_THEORY.md`.'
+                                )
                             
                             # Excel Export
                             st.divider()
@@ -264,3 +278,85 @@ with tabs[3]:
                 
     except Exception as e:
         st.error(f"Error browsing database: {e}")
+
+# --- Tab 5: Tax Guide ---
+with tabs[4]:
+    st.header("📖 German Tax Guide for IBKR Users")
+    st.markdown(
+        "Dieses Handbuch erklärt, wie IBKR2KAP Ihre Trades den Zeilen der "
+        "**Anlage KAP** zuordnet und welche steuerlichen Regeln dabei angewendet werden."
+    )
+    
+    with st.expander("📋 Anlage KAP — Zeilen im Überblick", expanded=True):
+        st.markdown(
+            "**Zeile 7 — Kapitalerträge (allgemein)**\n\n"
+            "Dividenden, Zinsen und Gewinne/Verluste aus sonstigen Wertpapieren (ETFs, Anleihen, Fonds). "
+            "Aktiengewinne und Termingeschäfte werden separat erfasst.\n\n"
+            "**Zeile 8 — Gewinne aus Aktienveräußerungen**\n\n"
+            "Nur die positiven realisierten Gewinne aus dem Verkauf von Einzelaktien. "
+            "ETFs gelten steuerlich nicht als Aktien.\n\n"
+            "**Zeile 9 — Verluste aus Aktienveräußerungen**\n\n"
+            "Absolutwert der Aktienverluste. Diese Verluste dürfen ausschließlich mit Aktiengewinnen "
+            "(Zeile 8) verrechnet werden — nicht mit Dividenden oder sonstigen Erträgen.\n\n"
+            "**Zeile 10 — Termingeschäfte (netto)**\n\n"
+            "Gewinne minus Verluste aus Optionen und Futures. "
+            "Die 20.000 €-Verlustbegrenzung wurde durch das JStG 2024 rückwirkend aufgehoben.\n\n"
+            "**Zeile 15 — Anrechenbare ausländische Steuern**\n\n"
+            "Im Ausland einbehaltene Quellensteuern auf Dividenden und Zinsen. "
+            "Diese können auf die deutsche Abgeltungsteuer angerechnet werden."
+        )
+    
+    with st.expander("⚖️ Verlusttöpfe (Tax Pools)"):
+        for pool_name, explanation in TAX_POOL_EXPLANATIONS.items():
+            st.markdown(f"**{pool_name}**: {explanation}")
+        st.info(
+            "Aktienverluste können **nur** mit Aktiengewinnen verrechnet werden "
+            "(§ 20 Abs. 6 Satz 5 EStG). Nicht verrechnete Verluste werden vorgetragen."
+        )
+    
+    with st.expander("🔢 FIFO-Prinzip (First-In-First-Out)"):
+        st.markdown(
+            "Bei der Berechnung des Veräußerungsgewinns wird unterstellt, dass die **zuerst angeschafften** "
+            "Wertpapiere auch **zuerst veräußert** werden (§ 20 Abs. 4 Satz 7 EStG).\n\n"
+            "IBKR2KAP verwendet das **Settlement-Datum** (Valuta) für die steuerliche Zuordnung:\n"
+            "- Bei Aktien liegt das Settlement i. d. R. **T+2** (zwei Geschäftstage nach dem Handelstag)\n"
+            "- Ein Trade am 30.12.2023 mit Settlement am 03.01.2024 gehört steuerlich ins **Jahr 2024**"
+        )
+    
+    with st.expander("💱 Währungsumrechnung (FX)"):
+        st.markdown(
+            "**ECB-Referenzkurse**: Alle Fremdwährungsbeträge werden zum offiziellen EZB-Kurs in Euro "
+            "umgerechnet. An Wochenenden/Feiertagen wird der letzte verfügbare Geschäftstagskurs verwendet.\n\n"
+            "**FX-Gewinne (§ 23 EStG)**: Gewinne aus dem Halten von Fremdwährung sind steuerpflichtig, "
+            "wenn die Haltefrist unter einem Jahr liegt. Diese gehören in die **Anlage SO**, nicht in die Anlage KAP. "
+            "IBKR2KAP berechnet die Haltefrist automatisch per FIFO."
+        )
+    
+    with st.expander("🏢 Kapitalmaßnahmen (Corporate Actions)"):
+        st.markdown(
+            "- **Aktiensplits**: Kein steuerpflichtiger Vorgang. Anschaffungskosten werden über den "
+            "Splitfaktor auf die neue Stückzahl verteilt.\n"
+            "- **Reverse Splits**: Ebenfalls steuerneutral. Kosten werden konsolidiert, "
+            "auch bei Symbol-/ISIN-Änderung.\n"
+            "- **Spinoffs**: Anschaffungskosten der Mutteraktie werden anteilig auf Mutter und "
+            "Tochter aufgeteilt. Erst beim späteren Verkauf wird der anteilige Gewinn realisiert."
+        )
+    
+    with st.expander("📊 Optionen (Termingeschäfte)"):
+        st.markdown(
+            "| Situation | Steuerliche Behandlung |\n"
+            "|---|---|\n"
+            "| **Verfall (Expiry)** | Prämie wird als Gewinn oder Verlust realisiert |\n"
+            "| **Ausübung (Exercise)** | Prämie fließt in die Anschaffungskosten der Aktie — kein separater Gewinn/Verlust |\n"
+            "| **Zuteilung (Assignment)** | Wie Ausübung — Prämie passt die Cost Basis der Aktie an |\n"
+            "\n"
+            "Optionen werden als **Termingeschäfte** kategorisiert und in **Zeile 10** erfasst."
+        )
+    
+    st.divider()
+    st.warning(
+        "⚠️ **Haftungsausschluss**: Diese Informationen stellen keine Steuerberatung dar. "
+        "Für individuelle steuerliche Fragen wenden Sie sich bitte an einen **Steuerberater**. "
+        "Rechtsstand: 2024/2025 (JStG 2024)."
+    )
+    st.info("📄 Die vollständige Referenz finden Sie in der Datei `docs/GERMAN_TAX_THEORY.md` im Projektverzeichnis.")
