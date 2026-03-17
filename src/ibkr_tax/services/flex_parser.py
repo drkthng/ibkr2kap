@@ -66,8 +66,36 @@ class FlexXMLParser:
             return f'<CashTransaction {clean_attrs}>'
 
         clean_data = ct_pattern.sub(process_ct, data)
-        # Strip CorporateActions because ibflex 0.15 doesn't have the Type for the container tag
-        clean_data = re.sub(r'<CorporateActions\b[^>]*>.*?</CorporateActions>', '', clean_data, flags=re.DOTALL)
+
+        # --- Whitelist-based container stripping ---
+        # ibflex can only handle a limited set of FlexStatement child elements.
+        # Instead of blacklisting individual problem tags, keep ONLY what ibflex needs.
+        # CorporateActions are parsed separately via raw ElementTree.
+        ibflex_safe_children = {
+            "AccountInformation", "Trades", "CashTransactions",
+            "OptionEAE", "OpenPositions",
+        }
+        # Strip any FlexStatement child containers NOT in the whitelist
+        import xml.etree.ElementTree as ET
+        try:
+            root = ET.fromstring(clean_data)
+            for statements in root.findall(".//FlexStatements"):
+                for statement in statements.findall("FlexStatement"):
+                    for child in list(statement):
+                        if child.tag not in ibflex_safe_children:
+                            statement.remove(child)
+            clean_data = ET.tostring(root, encoding="unicode")
+        except ET.ParseError:
+            pass  # If ET fails, fall through with regex-only cleaned data
+
+        # Strip `notes` and `code` from Trade tags — ibflex chokes on unknown codes like 'FP'
+        trade_pattern = re.compile(r'<Trade\s+([^>]+)>', re.IGNORECASE)
+        def clean_trade(match):
+            attrs = match.group(1)
+            attrs = re.sub(r'\bnotes="[^"]*"', '', attrs)
+            attrs = re.sub(r'\bcode="[^"]*"', '', attrs)
+            return f'<Trade {attrs}>'
+        clean_data = trade_pattern.sub(clean_trade, clean_data)
         return clean_data
 
     def _get_val(self, obj: Any) -> Any:
@@ -130,6 +158,8 @@ class FlexXMLParser:
 
     def get_cash_transactions(self) -> List[CashTransactionSchema]:
         transactions = []
+        if self.response is None:
+            return transactions
         for statement in self.response.FlexStatements:
             account_id = getattr(statement, "accountId", "UNKNOWN")
             for ct in statement.CashTransactions:
