@@ -2,7 +2,7 @@ from sqlalchemy import select, func, distinct
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
 
-from ibkr_tax.models.database import Account, Trade, CashTransaction, CorporateAction, Transfer, Gain
+from ibkr_tax.models.database import Account, Trade, CashTransaction, CorporateAction, Transfer, Gain, ManualPosition
 from ibkr_tax.schemas.ibkr import AccountSchema, TradeSchema, CashTransactionSchema, CorporateActionSchema, TransferSchema
 
 
@@ -186,3 +186,48 @@ def get_tax_years_for_account(session: Session, account_identifier: str) -> list
     # 4. Merge and sort
     all_years = sorted(gain_years.union(cash_years), reverse=True)
     return all_years
+
+
+def get_manual_positions(session: Session, account_db_id: int) -> list:
+    """Returns all ManualPosition records for the given internal account ID, ordered by acquisition_date."""
+    stmt = (
+        select(ManualPosition)
+        .where(ManualPosition.account_id == account_db_id)
+        .order_by(ManualPosition.acquisition_date)
+    )
+    return list(session.execute(stmt).scalars().all())
+
+
+def add_manual_position(
+    session: Session,
+    account_db_id: int,
+    symbol: str,
+    asset_category: str,
+    quantity,
+    acquisition_date: str,
+    cost_basis_total_eur,
+    description: str = "Manual Opening Position",
+) -> ManualPosition:
+    """Creates and commits a new ManualPosition record."""
+    mp = ManualPosition(
+        account_id=account_db_id,
+        symbol=symbol,
+        asset_category=asset_category,
+        quantity=quantity,
+        acquisition_date=acquisition_date,
+        cost_basis_total_eur=cost_basis_total_eur,
+        description=description,
+    )
+    session.add(mp)
+    session.commit()
+    return mp
+
+
+def delete_manual_position(session: Session, manual_position_id: int) -> bool:
+    """Deletes a ManualPosition by ID. Returns True if deleted."""
+    mp = session.get(ManualPosition, manual_position_id)
+    if mp:
+        session.delete(mp)
+        session.commit()
+        return True
+    return False
