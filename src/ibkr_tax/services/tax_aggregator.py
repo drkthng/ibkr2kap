@@ -85,22 +85,28 @@ class TaxAggregatorService:
 
         # 3. Detect Missing Cost Basis (Unresolved Short Positions)
         from ibkr_tax.models.database import FIFOLot, FXFIFOLot
+        from sqlalchemy.orm import selectinload
         
         # 3a. Symbol-basis missing cost basis
+        # Redundant safety: Filter out anything starting with EUR. or marked as CASH
         stmt_missing = (
             select(FIFOLot)
+            .options(selectinload(FIFOLot.trade))
             .join(Trade, FIFOLot.trade_id == Trade.id)
             .where(Trade.account_id == account_db_id)
             .where(FIFOLot.remaining_quantity < 0)
             .where(Trade.settle_date.like(f"{tax_year}%"))
+            .where(Trade.asset_category != "CASH")
+            .where(FIFOLot.symbol.not_like("EUR.%"))
         )
         missing_lots = self.session.execute(stmt_missing).scalars().all()
         warnings = []
         for lot in missing_lots:
-            # Using normalize() to remove trailing zeros for cleaner display
+            # Using normalize() to remove trailing zeros
             qty_clean = abs(lot.remaining_quantity).normalize()
             warnings.append(
-                f"Missing cost basis for {qty_clean:f} shares of {lot.symbol} (first sold on {lot.settle_date})"
+                f"❌ **Sold {qty_clean:f} {lot.symbol}** on {lot.settle_date} (ID: {lot.trade.ib_trade_id}), "
+                f"but no corresponding Buy found. Using 0€ cost basis."
             )
 
         # 3b. FX-basis missing cost basis
@@ -114,7 +120,8 @@ class TaxAggregatorService:
         for fx_lot in missing_fx_lots:
             amt_clean = abs(fx_lot.remaining_amount).normalize()
             warnings.append(
-                f"Missing cost basis for {amt_clean:f} {fx_lot.currency} (disposed on {fx_lot.acquisition_date})"
+                f"💱 **Spent/Sold {amt_clean:f} {fx_lot.currency}** on {fx_lot.acquisition_date}, "
+                f"but no previous acquisition found. Using 0€ cost basis."
             )
 
         return TaxReport(

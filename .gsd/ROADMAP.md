@@ -1,61 +1,34 @@
-# ROADMAP.md
+# IBKR2KAP Roadmap
 
-> **Current Milestone**: v1.0 complete
-> **Next Milestone**: v2.0 - TBD
+## Milestone v1.0: Core Ingestion & Basic FIFO (Complete)
+- [x] Phase 0: System Architecture & Database Schema
+- [x] Phase 1: IBKR Flex Query XML Parser (Trades & Cash)
+- [x] Phase 2: Fundamental Repository Patterns
+- [x] Phase 3: Interactive CLI for Data Import
+- [x] Phase 4: Core FIFO Matching Logic (Stocks)
+- [x] Phase 5: FIFO Idempotency & Persistence
+- [x] Phase 6: Basic PnL Reporting (CLI)
 
-## Must-Haves (v1.0)
-- [x] Python 3.12 Environment setup with Database.
-- [x] Parse Flex Query XML correctly.
-- [x] Validated data correctly persistent in SQLite.
-- [x] Tax compliant FIFO engine for accurately matching lots based on settlement dates.
-- [x] Tax categorization engine for mapping to "Anlage KAP".
-- [x] Tax Consultant Excel Report Export.
-- [x] Local Streamlit UI for the end-user.
-- [x] Currency Gains (§ 23 EStG) compliance.
-
-## Milestone v1.0 (Archived)
-All phases 0-14 completed and verified. See `.gsd/milestones/v1.0-SUMMARY.md` for details.
-
-## Next Milestone: v1.1 (Planning)
-> **Goal**: UI Enhancements & Ingestion Robustness
-- [ ] Account ID and Tax Year dynamic dropdowns based on database state.
-- [ ] Unknown entity info-messages with location during XML ingestion.
-- [ ] Streamlit UI configuration (remove menu/deploy button).
-- [ ] Raw database browser tab for data verification.
-
-### Phase 15: XML Ingestion Error Reporting
-**Status**: ✅ Complete
-**Objective**: Detect unknown entities/models during Flex Query XML parsing and return formatted info-messages with the entity type and file location.
-
-### Phase 16: Streamlit UI Configuration & DB Browser
-**Status**: ✅ Complete
-**Objective**: Remove the Streamlit top-right menu and "Deploy" button. Add a new tab/section to browse raw SQLite database tables.
-
-### Phase 17: Dynamic Account & Tax Year Dropdowns
-**Status**: ✅ Complete
-**Objective**: Modify the "Anlage KAP Report" page to fetch distinct Account IDs from the database for the dropdown, and cascade the "Tax Year" dropdown based on the available data for the selected Account ID.
-
-### Phase 18: Buy-Date Reporting for Gains/Losses
-**Status**: ✅ Complete
-**Objective**: Update the final tax report generation to not only show the sell date for stock and currency gains/losses, but also include the original buy-date of the underlying position.
-
-### Phase 19: Missing Cost-Basis Reporting & Prompts
-**Status**: ✅ Complete
-**Objective**: Enhance report generation to detect sell-trades lacking corresponding buy-trades. Display a list of these missing data points to the user and prompt for confirmation on whether to proceed with generating the report.
-
-### Phase 20: App Launch Options & Documentation
-**Status**: ✅ Complete
-**Objective**: Implement one-click app startup and OS taskbar/dock pinning capabilities (Windows Tauri executable, macOS Smart Launcher script). Cleanly handle Streamlit server shutdown. Document Flex Query setup.
-
-### Phase 21: Bug Fix: Missing Cost-Basis Reporting
-**Status**: ✅ Complete
-**Objective**: Restrict missing cost-basis warnings to the specific tax year requesting the report. Ensure trades from future years do not trigger errors in current reports.
-
-### Phase 22: UI and FX Bug Fixes
-**Status**: ✅ Complete
-**Objective**: Resolve Data Browser tab disappearance by removing `st.stop()` and exclude FX trades from standard FIFO engine to prevent incorrect "missing cost-basis" warnings for currency conversions.
+## Milestone v1.1: German Tax Logic & Enhanced UX (Complete)
+- [x] Phase 7: Corporate Action Engine (Stock Splits)
+- [x] Phase 8: German Tax Categorization (Aktien vs. Sonstige)
+- [x] Phase 9: FX Conversion Engine (ECB Rates Integration)
+- [x] Phase 10: Streamlit UI Implementation (Web Interface)
+- [x] Phase 11: Excel Export Service (Tax Consultant Format)
+- [x] Phase 12: Bi-directional FIFO & Option Logic (Exercise/Assignment)
+- [x] Phase 13: End-to-End Integration Testing
+- [x] Phase 14: Windows & macOS App Launchers
+- [x] Phase 15: XML Ingestion Deep Inspection (Unmapped Entities)
+- [x] Phase 16: UI Refinement & Database Browser
+- [x] Phase 17: Dynamic UI Components (Account/Year selection)
+- [x] Phase 18: Buy-Date Reporting for Gains/Losses
+- [x] Phase 19: Missing Cost-Basis Reporting & Prompts
+- [x] Phase 20: App Launch Options & Documentation
+- [x] Phase 21: Bug Fix: Missing Cost-Basis Reporting
+- [x] Phase 22: UI and FX Bug Fixes
+- [x] Phase 23: Descriptive Warnings and Database Maintenance
 
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Advanced corporate action support (Spinoffs, Mergers).
-- [ ] Portfolio analytics and dividend forecasting.
+- [ ] Real-time crypto portfolio tracking & FIFO matching.

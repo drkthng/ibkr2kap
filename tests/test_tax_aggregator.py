@@ -138,8 +138,39 @@ def test_generate_report_with_missing_cost_basis(db_session):
     # 3. Assertions
     # Should only return 1 warning for 2024, the 2025 one should be ignored
     assert len(report.missing_cost_basis_warnings) == 1
-    assert "Missing cost basis for 10 shares of TSLA" in report.missing_cost_basis_warnings[0]
-    assert "first sold on 2024-01-03" in report.missing_cost_basis_warnings[0]
+    assert "Sold 10 TSLA" in report.missing_cost_basis_warnings[0]
+    assert "on 2024-01-03" in report.missing_cost_basis_warnings[0]
+    assert "(ID: T1_MISSING)" in report.missing_cost_basis_warnings[0]
+
+def test_generate_report_filters_eur_symbols(db_session):
+    from ibkr_tax.models.database import FIFOLot
+    # 1. Setup Data
+    acc = Account(account_id="U3333333")
+    db_session.add(acc)
+    db_session.commit()
+
+    # Create a trade and a FIFOLot for EUR.USD in the symbol engine
+    # This simulates "garbage" from previous versions
+    t1 = Trade(ib_trade_id="T_EUR_GARBAGE", account_id=acc.id, symbol="EUR.USD", asset_category="CASH", 
+              description="EUR.USD", trade_date="2024-01-01", settle_date="2024-01-03", 
+              currency="USD", fx_rate_to_base=Decimal("0.9"), quantity=Decimal("-1000"), 
+              trade_price=Decimal("1.1"), proceeds=Decimal("1100"), buy_sell="SELL")
+    db_session.add(t1)
+    db_session.commit()
+
+    lot1 = FIFOLot(trade_id=t1.id, asset_category="CASH", symbol="EUR.USD", 
+                  settle_date="2024-01-03", original_quantity=Decimal("-1000"), 
+                  remaining_quantity=Decimal("-1000"), cost_basis_total=Decimal("0"), 
+                  cost_basis_per_share=Decimal("0"))
+    db_session.add(lot1)
+    db_session.commit()
+
+    # 2. Run Aggregator
+    service = TaxAggregatorService(db_session)
+    report = service.generate_report("U3333333", 2024)
+
+    # 3. Assertions: Should be filtered out
+    assert len(report.missing_cost_basis_warnings) == 0
 
 def test_generate_report_with_missing_fx_cost_basis(db_session):
     from ibkr_tax.models.database import FXFIFOLot
@@ -161,5 +192,5 @@ def test_generate_report_with_missing_fx_cost_basis(db_session):
 
     # 3. Assertions
     assert len(report.missing_cost_basis_warnings) == 1
-    assert "Missing cost basis for 100 USD" in report.missing_cost_basis_warnings[0]
-    assert "disposed on 2024-06-01" in report.missing_cost_basis_warnings[0]
+    assert "Spent/Sold 100 USD" in report.missing_cost_basis_warnings[0]
+    assert "on 2024-06-01" in report.missing_cost_basis_warnings[0]

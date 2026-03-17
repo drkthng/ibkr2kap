@@ -7,6 +7,7 @@ from ibkr_tax.models.database import Base
 from ibkr_tax.services.pipeline import run_import
 from ibkr_tax.services.fifo_runner import FIFORunner
 from ibkr_tax.services.tax_aggregator import TaxAggregatorService
+from ibkr_tax.services.maintenance import MaintenanceService
 from ibkr_tax.services.excel_export import ExcelExportService
 from ibkr_tax.db.repository import get_distinct_account_ids, get_tax_years_for_account
 
@@ -111,6 +112,21 @@ with tabs[0]:
                     finally:
                         if os.path.exists(tmp_path):
                             os.remove(tmp_path)
+
+    st.divider()
+    with st.expander("🚨 Dangerous Zone"):
+        st.subheader("Reset All Data")
+        st.warning("This will permanently delete all trades, cash transactions, and processed results. Only account IDs will be preserved.")
+        confirm = st.checkbox("I understand that this action is irreversible")
+        if st.button("🚨 Reset Database", disabled=not confirm):
+            with st.spinner("Wiping data..."):
+                try:
+                    with SessionLocal() as session:
+                        maint = MaintenanceService(session)
+                        maint.reset_database()
+                        st.success("Database has been reset. All transaction tables are now empty.")
+                except Exception as e:
+                    st.error(f"Error resetting database: {e}")
 
 # --- Tab 2: Tax Processing (Placeholder for Plan 12.2) ---
 with tabs[1]:
