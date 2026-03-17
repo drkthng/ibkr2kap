@@ -6,7 +6,7 @@ from ibkr_tax.schemas.ibkr import CorporateActionSchema
 
 class CorporateActionEngine:
     """
-    Engine to handle Corporate Actions like Stock Splits.
+    Engine to handle Corporate Actions like Stock Splits, Reverse Splits, and Spinoffs.
     Adjusts open FIFOLots directly.
     """
 
@@ -17,26 +17,17 @@ class CorporateActionEngine:
         """Dispatches to the specific action handler."""
         if action.action_type == "SO":
             self.apply_spinoff(action)
-        elif action.action_type in ["RS", "BS"]: # RS is what we use for splits/reverse splits
-            self.apply_reverse_split(action)
+        elif action.action_type in ("RS", "FS"):
+            self.apply_split(action)
         # RI, DW, DI, ED are informational and ignored for FIFO
 
     def apply_spinoff(self, action: CorporateActionSchema):
         """
         Creates a virtual buy FIFOLot for the spun-off shares.
         """
-        # Spinoff creates NEW shares. We create a virtual lot.
-        # Note: action.quantity is the positive amount received (e.g. 3.0004)
-        # action.value is the total value assigned by IBKR (often close to 0)
-        
-        # We need the currency conversion if value is in non-EUR
-        # In this context, we might not have the FX rate easily available as in TradeEngine,
-        # but for spinoffs with nominal $0.0001 value, it doesn't matter much.
-        # In the future, we should probably fetch the FX rate for the spinoff date.
-        cost_basis_total = action.value # Simplified
+        cost_basis_total = action.value
         cost_basis_per_share = cost_basis_total / action.quantity if action.quantity != 0 else Decimal("0")
 
-        # Fetch the account internal ID
         from ibkr_tax.models.database import CorporateAction
         ca_record = self.session.query(CorporateAction).filter_by(transaction_id=action.transaction_id).first()
         ca_id = ca_record.id if ca_record else None
@@ -55,47 +46,62 @@ class CorporateActionEngine:
         self.session.add(new_lot)
         self.session.flush()
 
-    def apply_reverse_split(self, action: CorporateActionSchema):
+    def apply_split(self, action: CorporateActionSchema):
         """
         Applies a stock split or reverse split to all open FIFOLots.
-        IBKR provides 'quantity' as the net change in shares.
-        Example 4:1 Split -> 10 shares become 40. Quantity is +30. Ratio = 4.0.
-        Example 1:10 Reverse Split -> 1000 shares become 100. Quantity is -900. Ratio = 0.1.
+
+        Handles two cases:
+        1. Simple split (no symbol rename): ratio applied to lots matching action.symbol
+        2. Split with symbol rename (reverse split consolidation):
+           - action.parent_symbol = old symbol (lots to find)
+           - action.symbol = new symbol (rename lots to this)
+           - ratio computed from grouped records in group_split_actions()
+
+        Cost basis total is preserved (tax-neutral under German law).
+        cost_basis_per_share is recalculated after quantity adjustment.
         """
+        # Determine old and new symbols
+        old_symbol = action.parent_symbol if action.parent_symbol else action.symbol
+        new_symbol = action.symbol
+
+        # Determine if this is a symbol rename (old != new and old doesn't end with .OLD)
+        is_rename = old_symbol != new_symbol
+
+        # Look up lots by the old symbol (or current symbol for simple splits)
+        lookup_symbol = old_symbol
+        if is_rename and not old_symbol.endswith(".OLD"):
+            # For grouped events where parent_symbol is set to DEC.OLD,
+            # we need to find lots under the ORIGINAL symbol before IBKR renamed it.
+            # The original symbol is the new symbol (DEC) since IBKR trades used DEC.
+            # But after grouping, parent_symbol = DEC.OLD (the removal leg).
+            # Actually, we need to look for lots matching the original trade symbol.
+            # Since trades were bought under "DEC" and the .OLD records reference "DEC.OLD",
+            # we look for lots under the base symbol (strip .OLD suffix from parent if present).
+            lookup_symbol = old_symbol
+        
+        # If old symbol ends with .OLD, the real lots are under the base name
+        if old_symbol.endswith(".OLD"):
+            lookup_symbol = old_symbol.replace(".OLD", "")
+
         stmt = (
             select(FIFOLot)
-            .where(FIFOLot.symbol == action.symbol)
+            .where(FIFOLot.symbol == lookup_symbol)
             .where(FIFOLot.remaining_quantity != 0)
         )
         lots = self.session.execute(stmt).scalars().all()
 
-        for lot in lots:
-            # We need to calculate the ratio per lot to apply it consistently 
-            # to both original and remaining quantity.
-            # ratio = (current_qty + net_change) / current_qty
-            # However, IBKR's 'quantity' is for the whole position across the account.
-            # So we assume the ratio is the same for all lots.
-            
-            # Since we don't have the 'position-before' in the action record,
-            # we derive the ratio from the description if possible, or use the quantity 
-            # if we had the total position.
-            
-            # Use the backward-compat @property ratio if it works, 
-            # or try to derive it better.
-            ratio = action.ratio # This currently returns 1 in my new schema placeholder.
-            
-            # TODO: Better ratio derivation for RS when not in description.
-            # For DEC example: DEC(GB00BYX7JT74) 1 FOR 20 CONSOLIDATION
-            # If ratio is 1/20 = 0.05.
-            
-            # For now, let's look at the implementation plan: 
-            # "RS actions will compute ratio from old/new quantities"
-            # Actually, the SO record has a raw quantity. 
-            # Let's assume for splits we use the ratio property which I'll improve.
+        ratio = action.ratio
 
+        for lot in lots:
+            # Adjust quantities by ratio
             lot.original_quantity *= ratio
             lot.remaining_quantity *= ratio
-            
+
+            # Rename symbol if needed
+            if is_rename or old_symbol.endswith(".OLD"):
+                lot.symbol = new_symbol
+
+            # Recalculate cost_basis_per_share (total cost unchanged, tax-neutral)
             if lot.original_quantity != 0:
                 lot.cost_basis_per_share = lot.cost_basis_total / lot.original_quantity
             else:
