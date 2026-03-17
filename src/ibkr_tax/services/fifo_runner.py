@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, asc, delete
-from ibkr_tax.models.database import Account, Trade, FIFOLot, Gain, CorporateAction, Transfer
+from ibkr_tax.models.database import Account, Trade, FIFOLot, Gain, CorporateAction, Transfer, ManualPosition
 from ibkr_tax.services.fifo import FIFOEngine
 from ibkr_tax.schemas.ibkr import CorporateActionSchema
 
@@ -45,15 +45,21 @@ class FIFORunner:
         )
         transfers = self.session.execute(stmt_transfers).scalars().all()
         
-        # 5. Convert DB models to schemas and group split actions
+        # 5. Fetch all manual positions for the account
+        stmt_manual = (
+            select(ManualPosition)
+            .where(ManualPosition.account_id == account_id)
+        )
+        manual_positions = self.session.execute(stmt_manual).scalars().all()
+        
+        # 6. Convert DB models to schemas and group split actions
         action_schemas = [CorporateActionSchema.model_validate(a) for a in db_actions]
         
         from ibkr_tax.services.flex_parser import FlexXMLParser
         grouped_actions = FlexXMLParser._group_split_actions_static(action_schemas)
         
-        # 6. Interleave and sort by date. 
-        # Trades use 'settle_date', Actions use 'date', Transfers use 'settle_date'.
-        # Type priority: Transfers (0) before Corporate Actions (1) before Trades (2) on the same date.
+        # 7. Interleave and sort by date. 
+        # Type priority: Manual (-1) before Transfers (0) before Corporate Actions (1) before Trades (2).
         
         events = []
         for t in trades:
@@ -62,8 +68,11 @@ class FIFORunner:
             events.append({"date": a.date.isoformat(), "type": "action", "obj": a, "id": idx})
         for xfer in transfers:
             events.append({"date": xfer.settle_date, "type": "transfer", "obj": xfer, "id": xfer.id})
-            
-        events.sort(key=lambda x: (x["date"], 0 if x["type"] == "transfer" else (1 if x["type"] == "action" else 2), x["id"]))
+        for mp in manual_positions:
+            events.append({"date": mp.acquisition_date, "type": "manual", "obj": mp, "id": mp.id})
+        
+        type_priority = {"manual": -1, "transfer": 0, "action": 1, "trade": 2}
+        events.sort(key=lambda x: (x["date"], type_priority.get(x["type"], 99), x["id"]))
         
         # 7. Process events
         fifo_engine = FIFOEngine(self.session)
@@ -80,6 +89,8 @@ class FIFORunner:
             elif event["type"] == "transfer":
                 # Process individual transfer — create FIFOLot
                 transfer_engine._process_single_transfer(event["obj"])
+            elif event["type"] == "manual":
+                self._process_manual_position(event["obj"])
         
         self.session.commit()
 
@@ -112,5 +123,35 @@ class FIFORunner:
             self.session.execute(
                 delete(FIFOLot).where(FIFOLot.transfer_id.in_(transfer_ids))
             )
+
+        # Also delete FIFOLots from manual positions for this account
+        mp_ids_stmt = select(ManualPosition.id).where(ManualPosition.account_id == account_id)
+        mp_ids = self.session.execute(mp_ids_stmt).scalars().all()
+        if mp_ids:
+            self.session.execute(
+                delete(FIFOLot).where(FIFOLot.manual_position_id.in_(mp_ids))
+            )
         
+        self.session.flush()
+
+    def _process_manual_position(self, mp):
+        """Creates a FIFOLot from a ManualPosition record."""
+        quantity = mp.quantity
+        cost_basis = mp.cost_basis_total_eur
+        if quantity == 0:
+            return
+        lot = FIFOLot(
+            trade_id=None,
+            corporate_action_id=None,
+            transfer_id=None,
+            manual_position_id=mp.id,
+            asset_category=mp.asset_category,
+            symbol=mp.symbol,
+            settle_date=mp.acquisition_date,
+            original_quantity=quantity,
+            remaining_quantity=quantity,
+            cost_basis_total=cost_basis,
+            cost_basis_per_share=cost_basis / abs(quantity),
+        )
+        self.session.add(lot)
         self.session.flush()

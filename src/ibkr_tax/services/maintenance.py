@@ -1,7 +1,7 @@
 from sqlalchemy import delete
 from ibkr_tax.models.database import (
     Trade, CashTransaction, FIFOLot, FXFIFOLot,
-    FXGain, Gain, CorporateAction
+    FXGain, Gain, CorporateAction, Transfer, ManualPosition
 )
 
 class MaintenanceService:
@@ -21,6 +21,8 @@ class MaintenanceService:
             FIFOLot,
             FXFIFOLot,
             CorporateAction,
+            Transfer,
+            ManualPosition,
             Trade,
             CashTransaction
         ]
