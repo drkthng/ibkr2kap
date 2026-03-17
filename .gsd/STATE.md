@@ -1,15 +1,15 @@
 # STATE.md
 
-> **Current Position**: Phase 25 Planning
+> **Current Position**: Phase 25 Complete
 > **Last Updated**: 2026-03-17
 
 ## Current Position
-- **Phase**: 25 (plans created)
-- **Task**: Planning complete
-- **Status**: Ready for execution
+- **Phase**: 25 (completed)
+- **Task**: All tasks complete
+- **Status**: Verified & Merged
 
 ## Last Session Summary
-Phase 24 completed and merged. Phase 25 plans created: 3 waves covering schema/parser updates, engine refactor for reverse split with symbol rename, and E2E verification with real DEC consolidation data.
+Phase 25 executed and merged. Reverse split with symbol/ISIN rename fully implemented. 3 waves: schema (FS), parser grouping, engine refactor, FIFORunner integration, E2E verification. 86 tests passing (was 71).
 
 ## Next Steps
-1. /execute 25
+1. /plan 26
