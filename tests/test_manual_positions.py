@@ -232,3 +232,60 @@ def test_manual_position_eliminates_warning(db_session, account, manual_position
     aggregator = TaxAggregatorService(db_session)
     report = aggregator.generate_report("U999", 2023)
     assert report.missing_cost_basis_warnings == []
+
+
+def test_manual_position_as_sell_trade(db_session, account):
+    """A manual position with buy_sell='SELL' should match against an existing BUY trade."""
+    # 1. Add a BUY trade
+    buy = Trade(
+        ib_trade_id="BUY_FOR_MANUAL_SELL",
+        account_id=account.id,
+        asset_category="STK",
+        symbol="TSLA",
+        description="Tesla Buy",
+        trade_date="2023-01-01",
+        settle_date="2023-01-03",
+        currency="EUR",
+        fx_rate_to_base=Decimal("1.0"),
+        quantity=Decimal("10"),
+        trade_price=Decimal("100"),
+        proceeds=Decimal("-1000"),
+        ib_commission=Decimal("-5"),
+        taxes=Decimal("0"),
+        buy_sell="BUY",
+    )
+    db_session.add(buy)
+    db_session.flush()
+
+    # 2. Add a manual SELL position
+    mp = ManualPosition(
+        account_id=account.id,
+        symbol="TSLA",
+        asset_category="STK",
+        quantity=Decimal("10"),
+        acquisition_date="2023-02-01",
+        buy_sell="SELL",
+        open_close_indicator="C",
+        proceeds=Decimal("1500"),
+        ib_commission=Decimal("-5"),
+        fx_rate_to_base=Decimal("1.0"),
+        currency="EUR",
+        description="Manual Sell"
+    )
+    db_session.add(mp)
+    db_session.flush()
+
+    # 3. Run FIFO
+    runner = FIFORunner(db_session)
+    runner.run_for_account(account.id)
+
+    # 4. Verify Gain
+    gains = db_session.query(Gain).all()
+    assert len(gains) == 1
+    gain = gains[0]
+    assert gain.quantity_matched == Decimal("10")
+    # net_proceeds = 1500 - 5 = 1495
+    # cost_basis = 1000 + 5 = 1005
+    # pnl = 1495 - 1005 = 490
+    assert gain.realized_pnl == Decimal("490.0000")
+
