@@ -205,8 +205,18 @@ def add_manual_position(
     asset_category: str,
     quantity,
     acquisition_date: str,
-    cost_basis_total_eur,
+    cost_basis_total_eur=None,
     description: str = "Manual Opening Position",
+    trade_date: str | None = None,
+    currency: str | None = "EUR",
+    fx_rate_to_base=None,
+    trade_price=None,
+    proceeds=None,
+    taxes=0,
+    ib_commission=0,
+    buy_sell: str | None = None,
+    open_close_indicator: str | None = None,
+
 ) -> ManualPosition:
     """Creates and commits a new ManualPosition record."""
     mp = ManualPosition(
@@ -217,10 +227,20 @@ def add_manual_position(
         acquisition_date=acquisition_date,
         cost_basis_total_eur=cost_basis_total_eur,
         description=description,
+        trade_date=trade_date,
+        currency=currency,
+        fx_rate_to_base=fx_rate_to_base,
+        trade_price=trade_price,
+        proceeds=proceeds,
+        taxes=taxes,
+        ib_commission=ib_commission,
+        buy_sell=buy_sell,
+        open_close_indicator=open_close_indicator,
     )
     session.add(mp)
     session.commit()
     return mp
+
 
 
 def delete_manual_position(session: Session, manual_position_id: int) -> bool:

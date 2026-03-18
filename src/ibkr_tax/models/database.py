@@ -110,10 +110,22 @@ class ManualPosition(Base):
     asset_category: Mapped[str] = mapped_column()  # STK, OPT, etc.
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     acquisition_date: Mapped[str] = mapped_column()  # ISO date YYYY-MM-DD (Settlement)
-    cost_basis_total_eur: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    trade_date: Mapped[str | None] = mapped_column(nullable=True)
+    cost_basis_total_eur: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
     description: Mapped[str] = mapped_column(default="Manual Opening Position")
+    
+    # New fields to mirror IBKR trades
+    currency: Mapped[str | None] = mapped_column(default="EUR", nullable=True)
+    fx_rate_to_base: Mapped[Decimal | None] = mapped_column(Numeric(18, 6), nullable=True)
+    trade_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    proceeds: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    taxes: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), default=0, nullable=True)
+    ib_commission: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), default=0, nullable=True)
+    buy_sell: Mapped[str | None] = mapped_column(nullable=True) # BUY, SELL
+    open_close_indicator: Mapped[str | None] = mapped_column(nullable=True) # O, C
 
     account: Mapped["Account"] = relationship(back_populates="manual_positions")
+
 
 class FIFOLot(Base):
     """FIFOLot model tracking open units for FIFO matching."""
