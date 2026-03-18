@@ -1,7 +1,7 @@
 import streamlit as st
 import tempfile
 import os
-from ibkr_tax.db.engine import get_engine, get_session
+from ibkr_tax.db.engine import get_engine, get_session, migrate_schema
 from ibkr_tax.services.pipeline import run_import
 from ibkr_tax.services.fifo_runner import FIFORunner
 from ibkr_tax.services.tax_aggregator import TaxAggregatorService
@@ -35,12 +35,12 @@ st.markdown(
 # --- Database Initialization ---
 @st.cache_resource
 def init_connection():
-    engine = get_engine()
-    # Ensure tables are created (idempotent)
-    Base.metadata.create_all(bind=engine)
-    return engine
+    return get_engine()
 
 engine = init_connection()
+# Auto-migrate: create missing tables AND add missing columns on every startup.
+# This MUST be outside @st.cache_resource so schema changes are always applied.
+migrate_schema(engine, Base.metadata)
 SessionLocal = get_session(engine)
 
 # --- Sidebar ---
@@ -318,8 +318,19 @@ with tabs[3]:
                             m4, m5, m6 = st.columns(3)
                             m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €", help=KAP_TOOLTIPS["kap_line_10"])
                             m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €", help=KAP_TOOLTIPS["kap_line_15"])
-                            m6.metric("Total Realized PnL", f"{report.total_realized_pnl:,.2f} €", help=KAP_TOOLTIPS["total_realized_pnl"])
+                            m6.metric("Total Realized PnL (KAP + SO)", f"{report.total_realized_pnl:,.2f} €", help=KAP_TOOLTIPS["total_realized_pnl"])
                             
+                            st.subheader("Anlage SO (§ 23 EStG Fremdwährungsgeschäfte)")
+                            s1, s2, s3 = st.columns(3)
+                            s1.metric("SO FX Gesamtgewinn", f"{report.so_fx_gains_total:,.2f} €")
+                            s2.metric("SO FX Steuerpflichtig (< 1 J.)", f"{report.so_fx_gains_taxable_1y:,.2f} €")
+                            s3.metric("SO FX Steuerfrei (> 1 J.)", f"{report.so_fx_gains_tax_free:,.2f} €")
+
+                            if report.so_fx_freigrenze_applies:
+                                st.info("ℹ️ **Freigrenze angewendet**: Da die privaten Veräußerungsgewinne (§ 23) unter 1.000 € liegen, bleiben diese steuerfrei.")
+                            elif report.so_fx_gains_taxable_1y >= 1000:
+                                st.warning("⚠️ **Freigrenze überschritten**: Gewinne ab 1.000 € sind voll steuerpflichtig.")
+
                             with st.expander("ℹ️ Was bedeuten diese Zeilen?"):
                                 st.markdown(
                                     "| Zeile | Bezeichnung | Erklärung |\n"

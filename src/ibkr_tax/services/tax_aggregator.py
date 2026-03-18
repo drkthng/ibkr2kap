@@ -1,7 +1,7 @@
 from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
-from ibkr_tax.models.database import Trade, Gain, CashTransaction
+from ibkr_tax.models.database import Trade, Gain, CashTransaction, FXGain
 from ibkr_tax.schemas.report import TaxReport
 
 class TaxAggregatorService:
@@ -83,6 +83,28 @@ class TaxAggregatorService:
         # Line 7 = Dividends/Interest + Sonstige Gains
         kap_7 = dividends_interest + sonstige_gains
 
+        # 2b. Aggregate FX Gains (Anlage SO - § 23 EStG)
+        stmt_fx_gains = (
+            select(FXGain)
+            .where(FXGain.account_id == account_db_id)
+            .where(FXGain.disposal_date.like(f"{tax_year}%"))
+        )
+        fx_gains = self.session.execute(stmt_fx_gains).scalars().all()
+
+        so_fx_total = Decimal("0.00")
+        so_fx_taxable = Decimal("0.00")
+        so_fx_tax_free = Decimal("0.00")
+
+        for fxg in fx_gains:
+            so_fx_total += fxg.realized_pnl_eur
+            if fxg.is_taxable_section_23:
+                so_fx_taxable += fxg.realized_pnl_eur
+            else:
+                so_fx_tax_free += fxg.realized_pnl_eur
+
+        # Freigrenze applies if total taxable gains < 1000 EUR
+        so_freigrenze_applies = so_fx_taxable > 0 and so_fx_taxable < 1000
+
         # 3. Detect Missing Cost Basis (Unresolved Short Positions)
         from ibkr_tax.models.database import FIFOLot, FXFIFOLot
         from sqlalchemy.orm import selectinload
@@ -109,20 +131,8 @@ class TaxAggregatorService:
                 f"but no corresponding Buy found. Using 0€ cost basis."
             )
 
-        # 3b. FX-basis missing cost basis
-        stmt_fx_missing = (
-            select(FXFIFOLot)
-            .where(FXFIFOLot.account_id == account_db_id)
-            .where(FXFIFOLot.remaining_amount < 0)
-            .where(FXFIFOLot.acquisition_date.like(f"{tax_year}%"))
-        )
-        missing_fx_lots = self.session.execute(stmt_fx_missing).scalars().all()
-        for fx_lot in missing_fx_lots:
-            amt_clean = abs(fx_lot.remaining_amount).normalize()
-            warnings.append(
-                f"💱 **Spent/Sold {amt_clean:f} {fx_lot.currency}** on {fx_lot.acquisition_date}, "
-                f"but no previous acquisition found. Using 0€ cost basis."
-            )
+        # 3b. FX-basis missing cost basis warnings are REMOVED per redesign.
+        # We only track explicit FX conversions now.
 
         return TaxReport(
             account_id=account_identifier,
@@ -132,6 +142,10 @@ class TaxAggregatorService:
             kap_line_9_verluste_aktien=kap_9,
             kap_line_10_termingeschaefte=kap_10,
             kap_line_15_quellensteuer=withholding_tax,
-            total_realized_pnl=total_pnl,
+            so_fx_gains_total=so_fx_total,
+            so_fx_gains_taxable_1y=so_fx_taxable,
+            so_fx_gains_tax_free=so_fx_tax_free,
+            so_fx_freigrenze_applies=so_freigrenze_applies,
+            total_realized_pnl=total_pnl + so_fx_total,
             missing_cost_basis_warnings=warnings
         )

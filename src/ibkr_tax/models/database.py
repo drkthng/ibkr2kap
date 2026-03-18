@@ -189,7 +189,6 @@ class FXFIFOLot(Base):
 
     # Optional tracing
     trade_id: Mapped[int | None] = mapped_column(ForeignKey("trades.id"), nullable=True)
-    cash_transaction_id: Mapped[int | None] = mapped_column(ForeignKey("cash_transactions.id"), nullable=True)
 
     account: Mapped["Account"] = relationship(back_populates="fx_fifo_lots")
 

@@ -25,6 +25,12 @@ class TaxReport(BaseModel):
     # Line 15: Ausländische Steuern (Withholding Tax)
     kap_line_15_quellensteuer: Decimal = Field(default=Decimal("0.00"))
     
+    # Anlage SO: Fremdwährungsgeschäfte (§ 23 EStG)
+    so_fx_gains_total: Decimal = Field(default=Decimal("0.00"))
+    so_fx_gains_taxable_1y: Decimal = Field(default=Decimal("0.00"))
+    so_fx_gains_tax_free: Decimal = Field(default=Decimal("0.00"))
+    so_fx_freigrenze_applies: bool = Field(default=False)
+
     # Summary Field
     total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
 

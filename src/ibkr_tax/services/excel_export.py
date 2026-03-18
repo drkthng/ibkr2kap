@@ -51,7 +51,14 @@ class ExcelExportService:
             ("9", "Verluste aus Aktienveräußerungen", report.kap_line_9_verluste_aktien),
             ("10", "Termingeschäfte (netto)", report.kap_line_10_termingeschaefte),
             ("15", "Anrechenbare ausländische Steuern", report.kap_line_15_quellensteuer),
-            ("", "Gesamt realisierter Gewinn/Verlust", report.total_realized_pnl)
+            ("", "", ""),
+            ("SO", "Fremdwährungsgeschäfte (§ 23 EStG)", ""),
+            ("", "  - Gesamtgewinn/-verlust", report.so_fx_gains_total),
+            ("", "  - Davon steuerpflichtig (< 1 Jahr)", report.so_fx_gains_taxable_1y),
+            ("", "  - Davon steuerfrei (> 1 Jahr)", report.so_fx_gains_tax_free),
+            ("", "  - Freigrenze (1000€) unterschritten?", "JA" if report.so_fx_freigrenze_applies else "NEIN"),
+            ("", "", ""),
+            ("", "Gesamt realisierter Gewinn/Verlust (KAP + SO)", report.total_realized_pnl)
         ]
         
         for r_idx, (zeile, desc, val) in enumerate(kap_rows, 5):
@@ -106,11 +113,11 @@ class ExcelExportService:
             qty_cell.value = g.quantity_matched
             qty_cell.number_format = qty_format
             
-            p_cell = detail_sheet.cell(row=r_idx, column=5)
+            p_cell = detail_sheet.cell(row=r_idx, column=6)
             p_cell.value = g.proceeds
             p_cell.number_format = euro_format
             
-            c_cell = detail_sheet.cell(row=r_idx, column=6)
+            c_cell = detail_sheet.cell(row=r_idx, column=7)
             c_cell.value = g.cost_basis_matched
             c_cell.number_format = euro_format
             

@@ -25,114 +25,122 @@ class FXFIFOEngine:
             self._process_currency_stream(account_id, currency, currency_events)
 
     def _get_fx_events(self, account_id: int):
-        """Gathers all trades and cash transactions that affect FX pools."""
-        # Trades affecting FX:
-        # - Buying a USD stock: Disposal of USD (amount = proceeds + commission + taxes?)
-        # - Selling a USD stock: Acquisition of USD (amount = proceeds - commission - taxes?)
-        # Note: Proceeds for BUY is negative, Proceeds for SELL is positive in our DB.
-        # But we need to be careful about the sign.
-        # Usually: Net USD = Trade.proceeds (which is already signed) - abs(commission) - abs(taxes)?
-        # No, if BUY: proceeds is -100, commission is 1. Net USD = -101. (Disposal of 101 USD)
-        # If SELL: proceeds is 110, commission is 1. Net USD = 109. (Acquisition of 109 USD)
+        """Gathers only explicit FX conversion trades (asset_category == 'CASH')."""
+        # We only care about CASH trades. 
+        # Symbol is usually 'BASE.QUOTE' (e.g. 'EUR.USD')
+        # Trade.currency is usually the quote currency.
+        # proceeds is in Trade.currency.
+        # quantity is in base currency.
         
         trades = self.session.execute(
-            select(Trade).where(Trade.account_id == account_id).where(Trade.currency != 'EUR')
-        ).scalars().all()
-
-        cash_txs = self.session.execute(
-            select(CashTransaction).where(CashTransaction.account_id == account_id).where(CashTransaction.currency != 'EUR')
+            select(Trade)
+            .where(Trade.account_id == account_id)
+            .where(Trade.asset_category == 'CASH')
         ).scalars().all()
 
         events = []
         for t in trades:
-            # Net USD change
-            net_usd = t.proceeds - abs(t.ib_commission) - abs(t.taxes)
-            events.append({
-                'date': t.settle_date,
-                'amount': net_usd,
-                'currency': t.currency,
-                'fx_rate': t.fx_rate_to_base,
-                'ref_id': t.id,
-                'ref_type': 'trade'
-            })
+            # Parse symbol EUR.USD -> EUR (base), USD (quote)
+            try:
+                base, quote = t.symbol.split('.')
+            except ValueError:
+                # Handle non-standard symbols if any
+                base, quote = t.symbol, ""
 
-        for c in cash_txs:
-            events.append({
-                'date': c.settle_date,
-                'amount': c.amount,
-                'currency': c.currency,
-                'fx_rate': c.fx_rate_to_base,
-                'ref_id': c.id,
-                'ref_type': 'cash_tx'
-            })
+            # 1. Handle Quote Currency side (usually the currency of proceeds)
+            if quote and quote != 'EUR':
+                # Proceeds is the amount of quote currency acquired (+) or disposed (-)
+                events.append({
+                    'date': t.settle_date,
+                    'amount': t.proceeds, 
+                    'currency': quote,
+                    'fx_rate': t.fx_rate_to_base, # This is quote -> EUR rate in our DB
+                    'ref_id': t.id,
+                })
+
+            # 2. Handle Base Currency side (usually the quantity)
+            if base and base != 'EUR':
+                # If we BUY EUR.USD, quantity is +EUR, proceeds is -USD.
+                # If we SELL EUR.USD, quantity is -EUR, proceeds is +USD.
+                # So for the base currency: amount is -quantity? No.
+                # Quantity in our DB for trades is signed. BUY = +, SELL = -.
+                # For EUR.USD: BUY 1000 means +1000 EUR, -USD. 
+                # So base currency amount is exactly Trade.quantity.
+                
+                # We need the base -> EUR rate. 
+                # We have quote -> EUR rate (t.fx_rate_to_base) and price = quote/base.
+                # base_to_eur = (quote/base) * (eur/quote)? No.
+                # base_to_eur = price * quote_to_eur = (quote/base) * (eur/quote) = eur/base. Correct.
+                # Price is abs(proceeds / quantity)
+                if abs(t.quantity) > 0:
+                    price = abs(t.proceeds / t.quantity)
+                    base_to_eur = price * t.fx_rate_to_base
+                else:
+                    base_to_eur = t.fx_rate_to_base # fallback
+                
+                events.append({
+                    'date': t.settle_date,
+                    'amount': t.quantity,
+                    'currency': base,
+                    'fx_rate': base_to_eur,
+                    'ref_id': t.id,
+                })
 
         # Sort by date, then ref_id
         events.sort(key=lambda x: (x['date'], x['ref_id']))
         return events
 
     def _process_currency_stream(self, account_id: int, currency: str, events: list):
-        """Bidirectional FIFO matching for a single currency stream."""
+        """Standard FIFO matching: acquisitions (amount > 0) matched against disposals (amount < 0)."""
         for event in events:
             amount = event['amount']
             if amount == 0:
                 continue
 
-            # Try to match against opposite side first
-            remaining_to_match = self._match_fx_against_inventory(account_id, currency, event)
-            
-            if remaining_to_match != 0:
-                # Add remainder to inventory (positive or negative)
-                self._add_fx_lot(account_id, currency, event, remaining_to_match)
+            if amount > 0:
+                # Acquisition -> Create new lot
+                self._add_fx_lot(account_id, currency, event, amount)
+            else:
+                # Disposal -> consumes existing lots
+                self._match_disposal(account_id, currency, event)
 
     def _add_fx_lot(self, account_id: int, currency: str, event: dict, quantity: Decimal):
         lot = FXFIFOLot(
             account_id=account_id,
             currency=currency,
             acquisition_date=event['date'],
-            original_amount=quantity,  # Signed
-            remaining_amount=quantity, # Signed
+            original_amount=quantity,
+            remaining_amount=quantity,
             cost_basis_total_eur=abs(quantity) * event['fx_rate'],
             cost_basis_per_unit_eur=event['fx_rate'],
-            trade_id=event['ref_id'] if event['ref_type'] == 'trade' else None,
-            cash_transaction_id=event['ref_id'] if event['ref_type'] == 'cash_tx' else None
+            trade_id=event['ref_id']
         )
         self.session.add(lot)
         self.session.flush()
 
-    def _match_fx_against_inventory(self, account_id: int, currency: str, event: dict) -> Decimal:
-        amount_to_match = event['amount']
+    def _match_disposal(self, account_id: int, currency: str, event: dict):
+        amount_to_match = abs(event['amount'])
         date = event['date']
         rate = event['fx_rate']
 
-        # If amount > 0 (BUY Ccy), match against existing SHORT lots (remaining < 0)
-        # If amount < 0 (SELL Ccy), match against existing LONG lots (remaining > 0)
-        if amount_to_match > 0:
-            lot_filter = FXFIFOLot.remaining_amount < 0
-            target_sign = -1
-        else:
-            lot_filter = FXFIFOLot.remaining_amount > 0
-            target_sign = 1
-
+        # Find open LONG lots (remaining > 0)
         stmt = (
             select(FXFIFOLot)
             .where(FXFIFOLot.account_id == account_id)
             .where(FXFIFOLot.currency == currency)
-            .where(lot_filter)
+            .where(FXFIFOLot.remaining_amount > 0)
             .order_by(asc(FXFIFOLot.acquisition_date), asc(FXFIFOLot.id))
         )
         open_lots = self.session.execute(stmt).scalars().all()
 
-        current_to_match = abs(amount_to_match)
         for lot in open_lots:
-            if current_to_match <= 0:
+            if amount_to_match <= 0:
                 break
 
-            matched_qty = min(abs(lot.remaining_amount), current_to_match)
+            matched_qty = min(lot.remaining_amount, amount_to_match)
             
-            # Cost basis of matched amount from the opening lot
+            # Proceeds/Cost logic
             cost_basis_matched = matched_qty * lot.cost_basis_per_unit_eur
-            
-            # Proceeds/Cost from the matching event
             proceeds_matched = matched_qty * rate
             
             # Holding period
@@ -141,27 +149,25 @@ class FXFIFOEngine:
             days_held = (d2 - d1).days
             is_taxable = days_held <= 365
 
-            # PnL logic similar to stock FIFO
-            if target_sign == 1: # Closing LONG (SELL Currency)
-                pnl = proceeds_matched - cost_basis_matched
-            else: # Closing SHORT (BUY Currency)
-                pnl = cost_basis_matched - proceeds_matched
-            
             gain = FXGain(
                 account_id=account_id,
                 fx_lot_id=lot.id,
                 disposal_date=date,
                 amount_matched=matched_qty,
-                disposal_proceeds_eur=proceeds_matched if target_sign == 1 else cost_basis_matched,
-                cost_basis_matched_eur=cost_basis_matched if target_sign == 1 else proceeds_matched,
-                realized_pnl_eur=pnl,
+                disposal_proceeds_eur=proceeds_matched,
+                cost_basis_matched_eur=cost_basis_matched,
+                realized_pnl_eur=proceeds_matched - cost_basis_matched,
                 days_held=days_held,
                 is_taxable_section_23=is_taxable
             )
             self.session.add(gain)
             
-            lot.remaining_amount += (matched_qty if target_sign == -1 else -matched_qty)
-            current_to_match -= matched_qty
+            lot.remaining_amount -= matched_qty
+            amount_to_match -= matched_qty
 
+        # If amount_to_match > 0 here, it's a disposal with no acquisition (e.g. margin or missing data).
+        # Per user request, we ignore these for § 23 if they are not from explicit acquisitions.
+        # But we should maybe still create a matching "missing lot" warning in the aggregator?
+        # Actually, the user says "only track explicit buy/sell... no other stuff plays a role".
+        # So if I sell USD I never "bought", I have no § 23 pool to exhaust.
         self.session.flush()
-        return current_to_match * (1 if amount_to_match > 0 else -1)
