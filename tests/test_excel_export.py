@@ -101,12 +101,17 @@ def test_summary_sheet_values(db_session, tmp_path):
     # Map row contents to values
     # Col A is Zeile, Col B is description, Col C is value
     data = {}
-    for row in range(5, 11):
+    # Iterate through a larger range to find the rows we need, stopping before empty rows or after finding specific tags
+    for row in range(5, 20):
         zeile = ws.cell(row=row, column=1).value
-        # If zeile is None/empty string, it's the Total line
-        key = str(zeile) if zeile else "TOTAL"
-        data[key] = ws.cell(row=row, column=3).value
+        desc = ws.cell(row=row, column=2).value
+        val = ws.cell(row=row, column=3).value
         
+        if zeile:
+            data[str(zeile)] = val
+        elif desc and "Gesamt realisierter Gewinn/Verlust" in str(desc):
+            data["TOTAL"] = val
+            
     assert Decimal(str(data["7"])) == Decimal("100.00")
     assert Decimal(str(data["8"])) == Decimal("500.00")
     assert Decimal(str(data["9"])) == Decimal("200.00")

@@ -4,17 +4,14 @@
 > **Last Updated**: 2026-03-18
 
 ## Current Position
-- **Phase**: 29 (FX Engine Redesign) — **COMPLETED**
-- **Task**: Merged and Pushed to main
-- **Status**: Verified and Concluded
+- **Phase**: 31 (Advanced Manual Entry Fields)
+- **Task**: Planning complete
+- **Status**: Ready for execution
 
 ## Last Session Summary
-- Successfully completed Phase 29: FX Engine Redesign.
-- Refactored `FXFIFOEngine` to exclusively track explicit currency conversions (§ 23 EStG).
-- Updated database models, tests, and reporting (Anlage SO) in UI and Excel exports.
-- Fixed a SQLite migration bug in `engine.py` related to `ALTER TABLE DROP COLUMN` on foreign keys.
-- Merged `phase-29` into `main` and pushed to remote.
+- Created `phase-31` branch.
+- Authored 31-PLAN.md covering Schema, UI, and FIFO Engine integration.
+- Updated `ROADMAP.md` and `STATE.md`.
 
 ## Next Steps
-1. Determine Phase 30 objectives (e.g., further reporting refinements or new asset types).
-2. Gather user feedback on the new Anlage SO reporting.
+1. /execute 31

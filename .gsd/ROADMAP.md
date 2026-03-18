@@ -34,7 +34,9 @@
 - [x] Phase 26: German Tax Theory Document & UI Guidance
 - [x] Phase 27: Inter-Account Transfer Support (FIFO Lot Migration)
 - [x] Phase 28: Manual Cost-Basis Entry UI (Missing Open Positions)
-- [ ] Phase 29: FX Engine Redesign (Anlage SO)
+- [x] Phase 29: FX Engine Redesign (Anlage SO)
+- [x] Phase 30: UX Improvements (Selectability, Prefill, Multi-file Import)
+- [ ] Phase 31: Advanced Manual Entry Fields (Trade-like Fields & Close Positions)
 
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).

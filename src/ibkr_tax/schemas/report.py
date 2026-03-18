@@ -1,6 +1,16 @@
 from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict
 
+class MissingCostBasisWarning(BaseModel):
+    """
+    Structured warning for missing cost basis.
+    """
+    symbol: str
+    quantity: Decimal
+    date: str
+    trade_id: str
+    message: str
+
 class TaxReport(BaseModel):
     """
     TaxReport schema representing aggregated values for German Anlage KAP.
@@ -35,4 +45,4 @@ class TaxReport(BaseModel):
     total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
 
     # Warnings
-    missing_cost_basis_warnings: list[str] = Field(default_factory=list)
+    missing_cost_basis_warnings: list[MissingCostBasisWarning] = Field(default_factory=list)

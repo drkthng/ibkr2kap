@@ -138,9 +138,13 @@ def test_generate_report_with_missing_cost_basis(db_session):
     # 3. Assertions
     # Should only return 1 warning for 2024, the 2025 one should be ignored
     assert len(report.missing_cost_basis_warnings) == 1
-    assert "Sold 10 TSLA" in report.missing_cost_basis_warnings[0]
-    assert "on 2024-01-03" in report.missing_cost_basis_warnings[0]
-    assert "(ID: T1_MISSING)" in report.missing_cost_basis_warnings[0]
+    warning = report.missing_cost_basis_warnings[0]
+    assert "Sold 10 TSLA" in warning.message
+    assert "on 2024-01-03" in warning.message
+    assert "(ID: T1_MISSING)" in warning.message
+    assert warning.symbol == "TSLA"
+    assert warning.quantity == Decimal("10")
+    assert warning.date == "2024-01-03"
 
 def test_generate_report_filters_eur_symbols(db_session):
     from ibkr_tax.models.database import FIFOLot
@@ -172,14 +176,14 @@ def test_generate_report_filters_eur_symbols(db_session):
     # 3. Assertions: Should be filtered out
     assert len(report.missing_cost_basis_warnings) == 0
 
-def test_generate_report_with_missing_fx_cost_basis(db_session):
+def test_generate_report_no_fx_warnings_per_redesign(db_session):
     from ibkr_tax.models.database import FXFIFOLot
     # 1. Setup Data
     acc = Account(account_id="U2222222")
     db_session.add(acc)
     db_session.commit()
 
-    # Create a negative FX lot for 2024
+    # Create a negative FX lot for 2024 - should NOT trigger a warning in the asset engine
     lot = FXFIFOLot(account_id=acc.id, currency="USD", acquisition_date="2024-06-01",
                     original_amount=Decimal("-100"), remaining_amount=Decimal("-100"),
                     cost_basis_total_eur=Decimal("90"), cost_basis_per_unit_eur=Decimal("0.9"))
@@ -190,7 +194,5 @@ def test_generate_report_with_missing_fx_cost_basis(db_session):
     service = TaxAggregatorService(db_session)
     report = service.generate_report("U2222222", 2024)
 
-    # 3. Assertions
-    assert len(report.missing_cost_basis_warnings) == 1
-    assert "Spent/Sold 100 USD" in report.missing_cost_basis_warnings[0]
-    assert "on 2024-06-01" in report.missing_cost_basis_warnings[0]
+    # 3. Assertions: FX warnings are removed per Phase 29 redesign
+    assert len(report.missing_cost_basis_warnings) == 0

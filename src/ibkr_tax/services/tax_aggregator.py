@@ -111,6 +111,7 @@ class TaxAggregatorService:
         
         # 3a. Symbol-basis missing cost basis
         # Redundant safety: Filter out anything starting with EUR. or marked as CASH
+        from ibkr_tax.schemas.report import MissingCostBasisWarning
         stmt_missing = (
             select(FIFOLot)
             .options(selectinload(FIFOLot.trade))
@@ -126,9 +127,18 @@ class TaxAggregatorService:
         for lot in missing_lots:
             # Using normalize() to remove trailing zeros
             qty_clean = abs(lot.remaining_quantity).normalize()
-            warnings.append(
+            msg = (
                 f"❌ **Sold {qty_clean:f} {lot.symbol}** on {lot.settle_date} (ID: {lot.trade.ib_trade_id}), "
                 f"but no corresponding Buy found. Using 0€ cost basis."
+            )
+            warnings.append(
+                MissingCostBasisWarning(
+                    symbol=lot.symbol,
+                    quantity=qty_clean,
+                    date=lot.settle_date,
+                    trade_id=lot.trade.ib_trade_id,
+                    message=msg
+                )
             )
 
         # 3b. FX-basis missing cost basis warnings are REMOVED per redesign.

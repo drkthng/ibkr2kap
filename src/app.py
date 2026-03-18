@@ -27,6 +27,11 @@ st.markdown(
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
+    /* Force text to be highlightable everywhere */
+    * {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -63,57 +68,58 @@ with tabs[0]:
     col1, col2 = st.columns(2)
     
     with col1:
-        xml_file = st.file_uploader("Upload Flex XML", type=["xml"])
-        if xml_file:
+        xml_files = st.file_uploader("Upload Flex XML", type=["xml"], accept_multiple_files=True)
+        if xml_files:
             if st.button("Process XML"):
-                with st.spinner("Parsing XML..."):
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp:
-                        tmp.write(xml_file.getvalue())
-                        tmp_path = tmp.name
-                    
-                    try:
-                        with SessionLocal() as session:
-                            results = run_import(tmp_path, session, file_type="xml")
-                            session.commit()
-                            st.success(f"Successfully processed {xml_file.name}")
-                            st.json(results["counts"])
-                            
-                            if results.get("warnings"):
-                                st.warning("⚠️ **Unsupported Data Entities Found**")
-                                for warning in results["warnings"]:
-                                    st.write(f"- **{warning['entity']}** (Account: {warning['account_id']}): {warning['message']}")
-                                st.info("Note: The data above was skipped as there is currently no handling for these record types in this version of the app.")
-                    except Exception as e:
-                        st.error(f"Error processing XML: {e}")
-                    finally:
-                        if os.path.exists(tmp_path):
-                            os.remove(tmp_path)
+                for xml_file in xml_files:
+                    with st.spinner(f"Parsing {xml_file.name}..."):
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp:
+                            tmp.write(xml_file.getvalue())
+                            tmp_path = tmp.name
+                        
+                        try:
+                            with SessionLocal() as session:
+                                results = run_import(tmp_path, session, file_type="xml")
+                                session.commit()
+                                st.success(f"Successfully processed {xml_file.name}")
+                                st.json(results["counts"])
+                                
+                                if results.get("warnings"):
+                                    st.warning(f"⚠️ **Unsupported Data Entities Found in {xml_file.name}**")
+                                    for warning in results["warnings"]:
+                                        st.write(f"- **{warning['entity']}** (Account: {warning['account_id']}): {warning['message']}")
+                        except Exception as e:
+                            st.error(f"Error processing {xml_file.name}: {e}")
+                        finally:
+                            if os.path.exists(tmp_path):
+                                os.remove(tmp_path)
 
     with col2:
-        csv_file = st.file_uploader("Upload Activity CSV (Fallback)", type=["csv"])
-        if csv_file:
+        csv_files = st.file_uploader("Upload Activity CSV (Fallback)", type=["csv"], accept_multiple_files=True)
+        if csv_files:
             if st.button("Process CSV"):
-                with st.spinner("Parsing CSV..."):
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
-                        tmp.write(csv_file.getvalue())
-                        tmp_path = tmp.name
-                    
-                    try:
-                        with SessionLocal() as session:
-                            results = run_import(tmp_path, session, file_type="csv")
-                            session.commit()
-                            st.success(f"Successfully processed {csv_file.name}")
-                            st.json(results["counts"])
-                            
-                            if results.get("warnings"):
-                                st.warning("⚠️ **Unsupported Data Entities Found**")
-                                for warning in results["warnings"]:
-                                    st.write(f"- **{warning['entity']}** (Account: {warning.get('account_id', 'Unknown')}): {warning['message']}")
-                    except Exception as e:
-                        st.error(f"Error processing CSV: {e}")
-                    finally:
-                        if os.path.exists(tmp_path):
-                            os.remove(tmp_path)
+                for csv_file in csv_files:
+                    with st.spinner(f"Parsing {csv_file.name}..."):
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+                            tmp.write(csv_file.getvalue())
+                            tmp_path = tmp.name
+                        
+                        try:
+                            with SessionLocal() as session:
+                                results = run_import(tmp_path, session, file_type="csv")
+                                session.commit()
+                                st.success(f"Successfully processed {csv_file.name}")
+                                st.json(results["counts"])
+                                
+                                if results.get("warnings"):
+                                    st.warning(f"⚠️ **Unsupported Data Entities Found in {csv_file.name}**")
+                                    for warning in results["warnings"]:
+                                        st.write(f"- **{warning['entity']}** (Account: {warning.get('account_id', 'Unknown')}): {warning['message']}")
+                        except Exception as e:
+                            st.error(f"Error processing {csv_file.name}: {e}")
+                        finally:
+                            if os.path.exists(tmp_path):
+                                os.remove(tmp_path)
 
     st.divider()
     with st.expander("🚨 Dangerous Zone"):
@@ -226,15 +232,17 @@ with tabs[2]:
             with st.form("add_manual_position_form", clear_on_submit=True):
                 col_sym, col_cat = st.columns(2)
                 with col_sym:
-                    mp_symbol = st.text_input("Symbol (e.g. AAPL)", key="mp_symbol")
+                    mp_symbol = st.text_input("Symbol (e.g. AAPL)", key="mp_symbol_input")
                 with col_cat:
                     mp_asset_cat = st.selectbox("Asset Category", ["STK", "OPT", "FUT", "WAR"], key="mp_asset_cat")
 
                 col_qty, col_date = st.columns(2)
                 with col_qty:
-                    mp_qty = st.number_input("Quantity", min_value=0.0001, step=1.0, format="%.4f", key="mp_qty")
+                    # Provide default value to number_input if it's not yet in session_state
+                    default_qty = 100.0 if "mp_qty_input" not in st.session_state else st.session_state["mp_qty_input"]
+                    mp_qty = st.number_input("Quantity", min_value=0.0001, value=default_qty, step=1.0, format="%.4f", key="mp_qty_input")
                 with col_date:
-                    mp_date = st.date_input("Acquisition Date (Settlement)", key="mp_date")
+                    mp_date = st.date_input("Acquisition Date (Settlement)", key="mp_date_input")
 
                 col_cost, col_desc = st.columns(2)
                 with col_cost:
@@ -259,6 +267,10 @@ with tabs[2]:
                                 description=mp_desc or "Manual Opening Position",
                             )
                         st.success(f"Added {mp_qty} {mp_symbol.upper()} @ {mp_cost:.2f} EUR. Re-run FIFO Engine to include.")
+                        # Clear prefill state after success
+                        for key in ["mp_symbol_input", "mp_qty_input", "mp_date_input"]:
+                            if key in st.session_state:
+                                del st.session_state[key]
                         st.rerun()
 
 # --- Tab 4: Anlage KAP Report ---
@@ -288,6 +300,10 @@ with tabs[3]:
                 tax_year = st.selectbox("Tax Year", options=available_years)
         
         if tax_year and st.button("📊 Generate Tax Report"):
+            st.session_state["report_account"] = account_id
+            st.session_state["report_year"] = tax_year
+
+        if st.session_state.get("report_account") == account_id and st.session_state.get("report_year") == tax_year:
             with st.spinner("Aggregating tax data..."):
                 try:
                     with SessionLocal() as session:
@@ -296,11 +312,24 @@ with tabs[3]:
                         
                         # Check for warnings
                         can_show_report = True
+                        
+                        def set_prefill_state(sym, q, dt_str):
+                            from datetime import date
+                            st.session_state["mp_symbol_input"] = sym
+                            st.session_state["mp_qty_input"] = float(q)
+                            st.session_state["mp_date_input"] = date.fromisoformat(dt_str)
+
                         if report.missing_cost_basis_warnings:
                             st.warning("⚠️ **Missing Cost Basis Detected**")
                             st.error("The following sell trades do not have corresponding buy trades. This will lead to an incorrect taxable gain/loss calculation (treated as 100% gain if not resolved).")
                             for warning in report.missing_cost_basis_warnings:
-                                st.write(f"- {warning}")
+                                w_col1, w_col2 = st.columns([4, 1])
+                                with w_col1:
+                                    # Use st.code so the user instantly gets a copy button next to the text
+                                    st.code(warning.message, language="markdown")
+                                with w_col2:
+                                    if st.button("📝 Prefill Manual", key=f"prefill_{warning.trade_id}", on_click=set_prefill_state, args=(warning.symbol, warning.quantity, warning.date)):
+                                        st.success(f"Prefilled {warning.symbol}! Go to **📝 Manual Positions** tab.")
                             
                             st.info("💡 You can provide cost basis for these positions in the **📝 Manual Positions** tab, then re-run the FIFO Engine.")
                             
