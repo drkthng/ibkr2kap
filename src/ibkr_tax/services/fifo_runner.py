@@ -90,7 +90,8 @@ class FIFORunner:
                 # Process individual transfer — create FIFOLot
                 transfer_engine._process_single_transfer(event["obj"])
             elif event["type"] == "manual":
-                self._process_manual_position(event["obj"])
+                self._process_manual_position(event["obj"], fifo_engine)
+
         
         self.session.commit()
 
@@ -134,8 +135,44 @@ class FIFORunner:
         
         self.session.flush()
 
-    def _process_manual_position(self, mp):
-        """Creates a FIFOLot from a ManualPosition record."""
+    def _process_manual_position(self, mp, fifo_engine):
+        """Processes a ManualPosition, either as a direct FIFOLot or as a synthetic Trade."""
+        if mp.buy_sell:
+            # Synthetic Trade for FIFO matching (allows matching closing trades provided manually)
+            from ibkr_tax.models.database import Trade
+            
+            # Manual entries use positive quantity in UI, but Trade expects signed.
+            # In add_manual_position, we save mp.quantity as is.
+            # If BUY, quantity > 0. If SELL, quantity < 0.
+            signed_qty = mp.quantity if mp.buy_sell == "BUY" else -mp.quantity
+            
+            mock_trade = Trade(
+                id=-(1000000 + mp.id), # Negative ID to avoid collision with real trades
+                ib_trade_id=f"MANUAL_{mp.id}",
+                symbol=mp.symbol,
+                asset_category=mp.asset_category,
+                quantity=signed_qty,
+                buy_sell=mp.buy_sell,
+                open_close_indicator=mp.open_close_indicator or "O",
+                proceeds=mp.proceeds or 0,
+                ib_commission=mp.ib_commission or 0,
+                taxes=mp.taxes or 0,
+                fx_rate_to_base=mp.fx_rate_to_base or 1.0,
+                settle_date=mp.acquisition_date,
+                trade_date=mp.trade_date or mp.acquisition_date,
+                description=mp.description,
+                currency=mp.currency
+            )
+            fifo_engine.process_trade(mock_trade)
+            
+            # If there's a leftover lot, we need to link it to the manual position ID 
+            # instead of a trade ID if possible, but FIFOEngine._add_to_inventory 
+            # currently always sets trade_id=trade.id.
+            # However, for manual closure tracking, this synthetic trade approach is sufficient
+            # to generate Gains.
+            return
+
+        # Legacy / Simple Opening Lot logic
         quantity = mp.quantity
         cost_basis = mp.cost_basis_total_eur
         if quantity == 0:
@@ -150,8 +187,9 @@ class FIFORunner:
             settle_date=mp.acquisition_date,
             original_quantity=quantity,
             remaining_quantity=quantity,
-            cost_basis_total=cost_basis,
-            cost_basis_per_share=cost_basis / abs(quantity),
+            cost_basis_total=cost_basis or (mp.proceeds * mp.fx_rate_to_base) if mp.proceeds else 0,
+            cost_basis_per_share=(cost_basis or (mp.proceeds * mp.fx_rate_to_base)) / abs(quantity) if quantity != 0 else 0,
         )
         self.session.add(lot)
         self.session.flush()
+
