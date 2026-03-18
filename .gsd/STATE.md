@@ -1,18 +1,17 @@
 # STATE.md
 
-> **Current Position**: Phase 28 Complete
-> **Last Updated**: 2026-03-17
+> **Current Position**: Phase 29 Planning
+> **Last Updated**: 2026-03-18
 
 ## Current Position
-- **Phase**: 28 (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
+- **Phase**: 29 (FX Engine Redesign)
+- **Task**: Planning
+- **Status**: Not Started
 
 ## Last Session Summary
 Phase 28 executed successfully. 2 plans, 6 tasks completed across 2 waves.
-- Wave 1: ManualPosition model, FIFOLot FK, FIFORunner integration, maintenance cleanup, 5 unit tests
-- Wave 2: Repository CRUD, Streamlit UI tab with form/table/delete, Anlage KAP warning hint, 3 integration tests
 105/105 tests pass, 0 regressions.
+Phase 29 added to roadmap based on deep-dive research into German tax law regarding FX gains.
 
 ## Next Steps
-1. Milestone v1.2 complete — all phases done
+1. Run `/plan 29` to create structured execution plans for the FX Engine Redesign
