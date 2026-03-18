@@ -49,10 +49,13 @@ class ExcelExportService:
         # 5. Margin Interest (informational, non-deductible)
         self._add_margin_interest_sheet(wb, report)
         
-        # 6. FX Gains (§ 23)
+        # 6. Deposits & Withdrawals (informational)
+        self._add_deposits_withdrawals_sheet(wb, report)
+        
+        # 7. FX Gains (§ 23)
         self._add_fx_gains_sheet(wb, report)
         
-        # 7. Audit Trail: All Trades
+        # 8. Audit Trail: All Trades
         self._add_audit_trail_sheet(wb, report)
 
         wb.save(output_path)
@@ -90,7 +93,9 @@ class ExcelExportService:
             ("", "  - Davon steuerfrei (> 1 Jahr)", report.so_fx_gains_tax_free),
             ("", "  - Freigrenze (1000€) unterschritten?", "JA" if report.so_fx_freigrenze_applies else "NEIN"),
             ("", "", ""),
-            ("", "Gesamt realisierter Gewinn/Verlust (KAP + SO)", report.total_realized_pnl)
+            ("", "Gesamt Realisierter Kursgewinn (Trading PnL + FX PnL)", report.total_realized_pnl),
+            ("", "  Formel: (8) - (9) + (10) + (Sonstige Kursgewinne in 7) + (SO FX Gesamt)", ""),
+            ("", "  Hinweis: Dividenden und Zinsen sind NICHT in dieser Summe enthalten.", "")
         ]
         
         for r_idx, (zeile, desc, val) in enumerate(kap_rows, 5):
@@ -176,8 +181,8 @@ class ExcelExportService:
             cell.fill = self.header_fill
             
 
-        # Margin interest types to exclude from this sheet (shown in separate Marginkosten sheet)
-        margin_types = {"Broker Interest Paid"}
+        # Margin/Non-taxable types to exclude from this sheet
+        exclude_types = {"broker interest paid", "bond interest paid", "deposits & withdrawals"}
 
         stmt = (
             select(CashTransaction)
@@ -187,11 +192,11 @@ class ExcelExportService:
             .order_by(CashTransaction.settle_date.asc())
         )
         all_txs = self.session.execute(stmt).scalars().all()
-        # Filter: exclude explicit 'Broker Interest Paid' and negative 'Broker Interest Paid/Received'
+        # Filter: exclude margin costs and non-taxable cash movements
         txs = [
             ct for ct in all_txs
-            if ct.type not in margin_types
-            and not (ct.type == "Broker Interest Paid/Received" and ct.amount < 0)
+            if ct.type.lower() not in exclude_types
+            and not (ct.type.lower() == "broker interest paid/received" and ct.amount < 0)
         ]
         
         for r_idx, ct in enumerate(txs, 2):
@@ -260,7 +265,7 @@ class ExcelExportService:
             cell.fill = self.header_fill
 
         # Fetch margin interest transactions
-        margin_types = {"Broker Interest Paid"}
+        margin_types = {"broker interest paid", "bond interest paid"}
         stmt = (
             select(CashTransaction)
             .join(Account, CashTransaction.account_id == Account.id)
@@ -271,8 +276,8 @@ class ExcelExportService:
         all_txs = self.session.execute(stmt).scalars().all()
         margin_txs = [
             ct for ct in all_txs
-            if ct.type in margin_types
-            or (ct.type == "Broker Interest Paid/Received" and ct.amount < 0)
+            if ct.type.lower() in margin_types
+            or (ct.type.lower() == "broker interest paid/received" and ct.amount < 0)
         ]
 
         for r_idx, ct in enumerate(margin_txs, 6):
@@ -294,6 +299,45 @@ class ExcelExportService:
         ws.freeze_panes = "A6"
         ws.column_dimensions["C"].width = 40
         for col in ["A", "B", "D", "E", "F", "G"]:
+            ws.column_dimensions[col].width = 15
+
+    def _add_deposits_withdrawals_sheet(self, wb, report):
+        """Informational sheet for cash deposits and withdrawals."""
+        ws = wb.create_sheet("Ein- und Auszahlungen (Info)")
+        headers = ["Datum", "Beschreibung", "Währung", "Betrag", "FX Rate", "Betrag (EUR)"]
+        for col_idx, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.value = header
+            cell.font = self.bold_font
+            cell.fill = self.header_fill
+
+        stmt = (
+            select(CashTransaction)
+            .join(Account, CashTransaction.account_id == Account.id)
+            .where(Account.account_id == report.account_id)
+            .where(CashTransaction.settle_date.like(f"{report.tax_year}%"))
+            .order_by(CashTransaction.settle_date.asc())
+        )
+        all_txs = self.session.execute(stmt).scalars().all()
+        dw_txs = [ct for ct in all_txs if ct.type.lower() == "deposits & withdrawals"]
+
+        for r_idx, ct in enumerate(dw_txs, 2):
+            ws.cell(row=r_idx, column=1).value = ct.settle_date
+            ws.cell(row=r_idx, column=2).value = ct.description
+            ws.cell(row=r_idx, column=3).value = ct.currency
+            
+            amt_cell = ws.cell(row=r_idx, column=4)
+            amt_cell.value = ct.amount
+            amt_cell.number_format = self.qty_format
+            
+            ws.cell(row=r_idx, column=5).value = ct.fx_rate_to_base
+            
+            eur_cell = ws.cell(row=r_idx, column=6)
+            eur_cell.value = ct.amount * ct.fx_rate_to_base
+            eur_cell.number_format = self.euro_format
+
+        ws.column_dimensions["B"].width = 50
+        for col in ["A", "C", "D", "E", "F"]:
             ws.column_dimensions[col].width = 15
 
     def _add_fx_gains_sheet(self, wb, report):

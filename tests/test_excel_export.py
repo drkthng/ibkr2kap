@@ -81,6 +81,7 @@ def test_export_creates_file(db_session, tmp_path):
     assert "Aktienveräußerungen (Mat.)" in wb.sheetnames
     assert "Termingeschäfte (Mat.)" in wb.sheetnames
     assert "Dividenden, Zinsen & Sonstiges" in wb.sheetnames
+    assert "Ein- und Auszahlungen (Info)" in wb.sheetnames
     assert "Transaktionsliste (Alle)" in wb.sheetnames
 
 def test_summary_sheet_values(db_session, tmp_path):
@@ -105,14 +106,14 @@ def test_summary_sheet_values(db_session, tmp_path):
     # Map row contents to values
     # Col A is Zeile, Col B is description, Col C is value
     data = {}
-    for row in range(5, 20):
+    for row in range(5, 25):
         zeile = ws.cell(row=row, column=1).value
         desc = ws.cell(row=row, column=2).value
         val = ws.cell(row=row, column=3).value
         
         if zeile:
             data[str(zeile)] = val
-        elif desc and "Gesamt realisierter Gewinn/Verlust" in str(desc):
+        elif desc and "Gesamt Realisierter Kursgewinn" in str(desc):
             data["TOTAL"] = val
             
     assert Decimal(str(data["7"])) == Decimal("100.00")

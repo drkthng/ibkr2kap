@@ -268,8 +268,6 @@ with tabs[2]:
                     mp_proceeds = st.number_input("Proceeds", value=0.0, step=0.01, format="%.4f", key="mp_proceeds")
                 with col_comm:
                     mp_comm = st.number_input("IB Commission (Trade)", value=0.0, step=0.01, format="%.4f", key="mp_comm")
-                with col_trcosts:
-                    mp_trading_costs = st.number_input("Total Trading Costs (EUR)", value=0.0, step=0.01, format="%.4f", key="mp_trading_costs_total")
 
                 mp_desc = st.text_input("Description (optional)", value="", key="mp_desc")
 
@@ -300,7 +298,6 @@ with tabs[2]:
 
                                 buy_sell=mp_buy_sell,
                                 open_close_indicator=mp_open_close,
-                                trading_costs_total=Decimal(str(mp_trading_costs))
                             )
 
                         st.success(f"Added {mp_qty} {mp_symbol.upper()} manual entry. Re-run FIFO Engine to include.")

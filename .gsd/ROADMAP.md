@@ -70,6 +70,7 @@
 - [x] Phase 30: UX Improvements (Selectability, Prefill, Multi-file Import)
 - [x] Phase 31: Advanced Manual Entry Fields (Full trade detail support + manual closing trades)
 - [x] Phase 33: Tax Compliance (Margin Interest & Deductions)
+- [x] Phase 34: Report & UI Refinement
 
 
 ## Future Milestone: v2.0 (Planned)

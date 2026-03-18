@@ -73,24 +73,30 @@ class TaxAggregatorService:
         margin_interest_paid = Decimal("0.00")
 
         for ctx in cash_txs:
-            # Type names vary by source:
-            #   CSV:  'Dividends', 'Withholding Tax', 'Broker Interest Paid', 'Broker Interest Received', etc.
-            #   XML (ibflex): 'Dividends', 'Withholding Tax', 'Broker Interest Paid/Received', etc.
-            #
+            # Type names vary by source (XML/CSV) and can have inconsistent casing.
+            # We use .lower() for robust matching.
+            tx_type_lower = ctx.type.lower()
+            
             # § 20 Abs. 9 EStG: Margin interest PAID is non-deductible Werbungskosten.
-            # Broker interest RECEIVED is taxable Zinserträge → KAP Line 7.
-            if ctx.type == "Broker Interest Paid":
-                # CSV path: explicit paid type → always margin cost
+            # Broker/Bond interest RECEIVED is taxable Zinserträge → KAP Line 7.
+            
+            if tx_type_lower in ["broker interest paid", "bond interest paid"]:
+                # Explicit paid types → always margin/interest cost (non-deductible)
                 margin_interest_paid += abs(ctx.amount * ctx.fx_rate_to_base)
-            elif ctx.type == "Broker Interest Paid/Received":
+            elif tx_type_lower == "broker interest paid/received":
                 # XML/ibflex path: combined type, use amount sign to distinguish
                 if ctx.amount < 0:
                     margin_interest_paid += abs(ctx.amount * ctx.fx_rate_to_base)
                 else:
                     dividends_interest += ctx.amount * ctx.fx_rate_to_base
-            elif ctx.type in ["Dividends", "Payment In Lieu of Dividends", "Broker Interest Received"]:
+            elif tx_type_lower in [
+                "dividends", 
+                "payment in lieu of dividends", 
+                "broker interest received", 
+                "bond interest received"
+            ]:
                 dividends_interest += ctx.amount * ctx.fx_rate_to_base
-            elif ctx.type == "Withholding Tax":
+            elif tx_type_lower == "withholding tax":
                 # Withholding tax is negative (money out). Line 15 is positive (tax credit).
                 withholding_tax += abs(ctx.amount * ctx.fx_rate_to_base)
 
