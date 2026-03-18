@@ -230,23 +230,44 @@ with tabs[2]:
             st.divider()
             st.subheader("Add New Manual Position")
             with st.form("add_manual_position_form", clear_on_submit=True):
-                col_sym, col_cat = st.columns(2)
+                col_sym, col_cat, col_bs, col_oc = st.columns([2, 1, 1, 1])
                 with col_sym:
                     mp_symbol = st.text_input("Symbol (e.g. AAPL)", key="mp_symbol_input")
                 with col_cat:
                     mp_asset_cat = st.selectbox("Asset Category", ["STK", "OPT", "FUT", "WAR"], key="mp_asset_cat")
+                with col_bs:
+                    mp_buy_sell = st.selectbox("Buy/Sell", ["BUY", "SELL"], key="mp_buy_sell")
+                with col_oc:
+                    mp_open_close = st.selectbox("Open/Close", ["O", "C"], key="mp_open_close")
 
-                col_qty, col_date = st.columns(2)
+                col_qty, col_price, col_curr, col_fx = st.columns(4)
                 with col_qty:
-                    # Provide default value to number_input if it's not yet in session_state
                     default_qty = 100.0 if "mp_qty_input" not in st.session_state else st.session_state["mp_qty_input"]
                     mp_qty = st.number_input("Quantity", min_value=0.0001, value=default_qty, step=1.0, format="%.4f", key="mp_qty_input")
-                with col_date:
-                    mp_date = st.date_input("Acquisition Date (Settlement)", key="mp_date_input")
+                with col_price:
+                    mp_price = st.number_input("Trade Price", min_value=0.0, step=0.01, format="%.4f", key="mp_price")
+                with col_curr:
+                    mp_currency = st.text_input("Currency", value="USD", key="mp_currency")
+                with col_fx:
+                    mp_fx_rate = st.number_input("FX Rate to EUR", min_value=0.0, value=1.0, step=0.0001, format="%.6f", key="mp_fx_rate")
 
-                col_cost, col_desc = st.columns(2)
-                with col_cost:
-                    mp_cost = st.number_input("Total Cost Basis in EUR", min_value=0.01, step=0.01, key="mp_cost")
+                col_date, col_settle = st.columns(2)
+                with col_date:
+                    mp_trade_date = st.date_input("Trade Date", key="mp_trade_date")
+                with col_settle:
+                    mp_settle_date = st.date_input("Settlement Date", key="mp_date_input")
+
+                col_proceeds, col_taxes, col_comm = st.columns(3)
+                with col_proceeds:
+                    mp_proceeds = st.number_input("Proceeds (in Currency)", value=0.0, step=0.01, format="%.2f", key="mp_proceeds")
+                with col_taxes:
+                    mp_taxes = st.number_input("Taxes", value=0.0, step=0.01, format="%.2f", key="mp_taxes")
+                with col_comm:
+                    mp_comm = st.number_input("Commission", value=0.0, step=0.01, format="%.2f", key="mp_comm")
+
+                col_cost_eur, col_desc = st.columns(2)
+                with col_cost_eur:
+                    mp_cost_eur = st.number_input("Total Cost Basis (EUR)", value=0.0, step=0.01, format="%.2f", key="mp_cost")
                 with col_desc:
                     mp_desc = st.text_input("Description", value="Manual Opening Position", key="mp_desc")
 
@@ -262,16 +283,26 @@ with tabs[2]:
                                 symbol=mp_symbol.strip().upper(),
                                 asset_category=mp_asset_cat,
                                 quantity=Decimal(str(mp_qty)),
-                                acquisition_date=mp_date.isoformat(),
-                                cost_basis_total_eur=Decimal(str(mp_cost)),
+                                acquisition_date=mp_settle_date.isoformat(),
+                                trade_date=mp_trade_date.isoformat(),
+                                cost_basis_total_eur=Decimal(str(mp_cost_eur)) if mp_cost_eur != 0 else None,
                                 description=mp_desc or "Manual Opening Position",
+                                currency=mp_currency.upper(),
+                                fx_rate_to_base=Decimal(str(mp_fx_rate)),
+                                trade_price=Decimal(str(mp_price)),
+                                proceeds=Decimal(str(mp_proceeds)),
+                                taxes=Decimal(str(mp_taxes)),
+                                ib_commission=Decimal(str(mp_comm)),
+                                buy_sell=mp_buy_sell,
+                                open_close_indicator=mp_open_close,
                             )
-                        st.success(f"Added {mp_qty} {mp_symbol.upper()} @ {mp_cost:.2f} EUR. Re-run FIFO Engine to include.")
+                        st.success(f"Added {mp_qty} {mp_symbol.upper()} manual entry. Re-run FIFO Engine to include.")
                         # Clear prefill state after success
-                        for key in ["mp_symbol_input", "mp_qty_input", "mp_date_input"]:
+                        for key in ["mp_symbol_input", "mp_qty_input", "mp_date_input", "mp_trade_date", "mp_buy_sell", "mp_open_close"]:
                             if key in st.session_state:
                                 del st.session_state[key]
                         st.rerun()
+
 
 # --- Tab 4: Anlage KAP Report ---
 with tabs[3]:
@@ -316,8 +347,13 @@ with tabs[3]:
                         def set_prefill_state(sym, q, dt_str):
                             from datetime import date
                             st.session_state["mp_symbol_input"] = sym
-                            st.session_state["mp_qty_input"] = float(q)
+                            st.session_state["mp_qty_input"] = float(abs(q))
                             st.session_state["mp_date_input"] = date.fromisoformat(dt_str)
+                            st.session_state["mp_trade_date"] = date.fromisoformat(dt_str)
+                            # Smart prefill: if we miss an opening for a SELL, prefill BUY + Open
+                            st.session_state["mp_buy_sell"] = "BUY"
+                            st.session_state["mp_open_close"] = "O"
+
 
                         if report.missing_cost_basis_warnings:
                             st.warning("⚠️ **Missing Cost Basis Detected**")
