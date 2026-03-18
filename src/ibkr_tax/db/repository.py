@@ -1,4 +1,6 @@
+from decimal import Decimal
 from sqlalchemy import select, func, distinct
+
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
 
