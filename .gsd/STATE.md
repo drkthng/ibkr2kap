@@ -1,18 +1,20 @@
 # STATE.md
 
-> **Current Position**: Phase 29 Planning
+> **Current Position**: Phase 29 Completed
 > **Last Updated**: 2026-03-18
 
 ## Current Position
-- **Phase**: 29 (FX Engine Redesign)
-- **Task**: Planning complete
-- **Status**: Ready for execution
+- **Phase**: 29 (FX Engine Redesign) — **COMPLETED**
+- **Task**: Merged and Pushed to main
+- **Status**: Verified and Concluded
 
 ## Last Session Summary
-Phase 28 executed successfully. 2 plans, 6 tasks completed across 2 waves.
-105/105 tests pass, 0 regressions.
-Phase 29 added to roadmap based on deep-dive research into German tax law regarding FX gains.
-Plans 29.1 and 29.2 created.
+- Successfully completed Phase 29: FX Engine Redesign.
+- Refactored `FXFIFOEngine` to exclusively track explicit currency conversions (§ 23 EStG).
+- Updated database models, tests, and reporting (Anlage SO) in UI and Excel exports.
+- Fixed a SQLite migration bug in `engine.py` related to `ALTER TABLE DROP COLUMN` on foreign keys.
+- Merged `phase-29` into `main` and pushed to remote.
 
 ## Next Steps
-1. /execute 29 — run all plans
+1. Determine Phase 30 objectives (e.g., further reporting refinements or new asset types).
+2. Gather user feedback on the new Anlage SO reporting.
