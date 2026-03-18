@@ -257,19 +257,14 @@ with tabs[2]:
                 with col_settle:
                     mp_settle_date = st.date_input("Settlement Date", key="mp_date_input")
 
-                col_proceeds, col_taxes, col_comm = st.columns(3)
+                col_proceeds, col_comm = st.columns(2)
                 with col_proceeds:
-                    mp_proceeds = st.number_input("Proceeds (in Currency)", value=0.0, step=0.01, format="%.2f", key="mp_proceeds")
-                with col_taxes:
-                    mp_taxes = st.number_input("Taxes", value=0.0, step=0.01, format="%.2f", key="mp_taxes")
+                    mp_proceeds = st.number_input("Proceeds", value=0.0, step=0.01, format="%.4f", key="mp_proceeds")
                 with col_comm:
-                    mp_comm = st.number_input("Commission", value=0.0, step=0.01, format="%.2f", key="mp_comm")
+                    mp_comm = st.number_input("Commission", value=0.0, step=0.01, format="%.4f", key="mp_comm")
 
-                col_cost_eur, col_desc = st.columns(2)
-                with col_cost_eur:
-                    mp_cost_eur = st.number_input("Total Cost Basis (EUR)", value=0.0, step=0.01, format="%.2f", key="mp_cost")
-                with col_desc:
-                    mp_desc = st.text_input("Description", value="Manual Opening Position", key="mp_desc")
+                mp_desc = st.text_input("Description (optional)", value="", key="mp_desc")
+
 
                 submitted = st.form_submit_button("➕ Add Manual Position")
                 if submitted:
@@ -285,14 +280,15 @@ with tabs[2]:
                                 quantity=Decimal(str(mp_qty)),
                                 acquisition_date=mp_settle_date.isoformat(),
                                 trade_date=mp_trade_date.isoformat(),
-                                cost_basis_total_eur=Decimal(str(mp_cost_eur)) if mp_cost_eur != 0 else None,
-                                description=mp_desc or "Manual Opening Position",
+                                cost_basis_total_eur=None,
+                                description=mp_desc,
                                 currency=mp_currency.upper(),
                                 fx_rate_to_base=Decimal(str(mp_fx_rate)),
                                 trade_price=Decimal(str(mp_price)),
                                 proceeds=Decimal(str(mp_proceeds)),
-                                taxes=Decimal(str(mp_taxes)),
+                                taxes=Decimal("0"),
                                 ib_commission=Decimal(str(mp_comm)),
+
                                 buy_sell=mp_buy_sell,
                                 open_close_indicator=mp_open_close,
                             )
