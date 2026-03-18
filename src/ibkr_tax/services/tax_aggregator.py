@@ -134,11 +134,13 @@ class TaxAggregatorService:
             warnings.append(
                 MissingCostBasisWarning(
                     symbol=lot.symbol,
+                    asset_category=lot.asset_category,
                     quantity=qty_clean,
                     date=lot.settle_date,
                     trade_id=lot.trade.ib_trade_id,
                     message=msg
                 )
+
             )
 
         # 3b. FX-basis missing cost basis warnings are REMOVED per redesign.

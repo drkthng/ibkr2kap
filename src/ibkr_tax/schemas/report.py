@@ -6,9 +6,11 @@ class MissingCostBasisWarning(BaseModel):
     Structured warning for missing cost basis.
     """
     symbol: str
+    asset_category: str
     quantity: Decimal
     date: str
     trade_id: str
+
     message: str
 
 class TaxReport(BaseModel):

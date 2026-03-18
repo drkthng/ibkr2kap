@@ -289,3 +289,73 @@ def test_manual_position_as_sell_trade(db_session, account):
     # pnl = 1495 - 1005 = 490
     assert gain.realized_pnl == Decimal("490.0000")
 
+
+def test_manual_position_category_mismatch(db_session, account):
+    """FIFO should NOT match if asset_category differs, but SHOULD match if they are the same."""
+    # 1. Add a BUY manual position with category 'STK'
+    mp_stk = ManualPosition(
+        account_id=account.id,
+        symbol="MATCH_TEST",
+        asset_category="STK",
+        quantity=Decimal("10"),
+        acquisition_date="2023-01-01",
+        buy_sell="BUY",
+        open_close_indicator="O",
+        proceeds=Decimal("-100"),
+        trade_price=Decimal("10"),
+        fx_rate_to_base=Decimal("1.0"),
+        currency="EUR"
+    )
+    db_session.add(mp_stk)
+    
+    # 2. Add a SELL trade with category 'OPT'
+    sell_opt = Trade(
+        ib_trade_id="SELL_OPT",
+        account_id=account.id,
+        asset_category="OPT",
+        symbol="MATCH_TEST",
+        description="Option Sell",
+        trade_date="2023-02-01",
+        settle_date="2023-02-02",
+        currency="EUR",
+        fx_rate_to_base=Decimal("1.0"),
+        quantity=Decimal("10"),
+        trade_price=Decimal("15"),
+        proceeds=Decimal("150"),
+        buy_sell="SELL",
+    )
+    db_session.add(sell_opt)
+    db_session.flush()
+    
+    # 3. Run FIFO - should NOT match
+    runner = FIFORunner(db_session)
+    runner.run_for_account(account.id)
+    
+    gains = db_session.query(Gain).all()
+    assert len(gains) == 0  # No match due to category mismatch
+    
+    # 4. Add a BUY manual position with category 'OPT' (correct match)
+    mp_opt = ManualPosition(
+        account_id=account.id,
+        symbol="MATCH_TEST",
+        asset_category="OPT",
+        quantity=Decimal("10"),
+        acquisition_date="2023-01-01",
+        buy_sell="BUY",
+        open_close_indicator="O",
+        proceeds=Decimal("-100"),
+        trade_price=Decimal("10"),
+        fx_rate_to_base=Decimal("1.0"),
+        currency="EUR"
+    )
+    db_session.add(mp_opt)
+    db_session.flush()
+    
+    # 5. Run FIFO - should match mp_opt
+    runner.run_for_account(account.id)
+    
+    gains = db_session.query(Gain).all()
+    assert len(gains) == 1
+    assert gains[0].quantity_matched == Decimal("10")
+
+

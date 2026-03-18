@@ -2,7 +2,8 @@ import os
 import pytest
 from decimal import Decimal
 from openpyxl import load_workbook
-from ibkr_tax.models.database import Account, Trade, Gain, FIFOLot, CashTransaction
+from ibkr_tax.models.database import Account, Trade, Gain, FIFOLot, CashTransaction, FXFIFOLot, FXGain
+
 from ibkr_tax.schemas.report import TaxReport
 from ibkr_tax.services.excel_export import ExcelExportService
 
@@ -77,7 +78,10 @@ def test_export_creates_file(db_session, tmp_path):
     
     wb = load_workbook(output_file)
     assert "Anlage KAP Summary" in wb.sheetnames
-    assert "Gains Detail" in wb.sheetnames
+    assert "Aktienveräußerungen (Mat.)" in wb.sheetnames
+    assert "Termingeschäfte (Mat.)" in wb.sheetnames
+    assert "Dividenden, Zinsen & Sonstiges" in wb.sheetnames
+    assert "Transaktionsliste (Alle)" in wb.sheetnames
 
 def test_summary_sheet_values(db_session, tmp_path):
     report = TaxReport(
@@ -101,7 +105,6 @@ def test_summary_sheet_values(db_session, tmp_path):
     # Map row contents to values
     # Col A is Zeile, Col B is description, Col C is value
     data = {}
-    # Iterate through a larger range to find the rows we need, stopping before empty rows or after finding specific tags
     for row in range(5, 20):
         zeile = ws.cell(row=row, column=1).value
         desc = ws.cell(row=row, column=2).value
@@ -130,16 +133,11 @@ def test_gains_detail_sheet_row_count(db_session, tmp_path):
     service.export(report, output_file)
     
     wb = load_workbook(output_file)
-    ws = wb["Gains Detail"]
+    ws = wb["Aktienveräußerungen (Mat.)"]
     
-    # Count rows excluding header
-    # max_row works if there's no trailing empty data
     rows = list(ws.iter_rows(min_row=2, values_only=True))
     assert len(rows) == 2
-    # Verify some content from the first gain (AAPL)
-    # Col index 0: Verkaufsdatum, 1: Anschaffungsdatum, 2: Symbol, 3: Tax Pool
     assert rows[0][2] == "AAPL" # Symbol
-    assert rows[0][3] == "Aktien" # Tax Pool
     assert rows[0][1] == "2023-12-22" # Buy Date
 
 def test_gains_detail_sorted_by_date(db_session, tmp_path):
@@ -148,7 +146,6 @@ def test_gains_detail_sorted_by_date(db_session, tmp_path):
     db_session.add(acc)
     db_session.commit()
 
-    # T1 late in the year, T2 early
     t1 = Trade(ib_trade_id="TX1", account_id=acc.id, symbol="Z", asset_category="STK", 
               description="Z", trade_date="2024-12-01", settle_date="2024-12-03", 
               currency="EUR", fx_rate_to_base=Decimal("1"), quantity=Decimal("-1"), 
@@ -189,20 +186,17 @@ def test_gains_detail_sorted_by_date(db_session, tmp_path):
     service.export(report, output_file)
     
     wb = load_workbook(output_file)
-    ws = wb["Gains Detail"]
+    ws = wb["Aktienveräußerungen (Mat.)"]
     
     dates = [ws.cell(row=r, column=1).value for r in range(2, 4)]
-    # Should be sorted: 2024-01-03 then 2024-12-03
     assert dates[0] == "2024-01-03"
     assert dates[1] == "2024-12-03"
 
 def test_fx_gains_sheet_export(db_session, tmp_path):
-    # 1. Setup Data
     acc = Account(account_id="U_FX_EXPORT_TEST")
     db_session.add(acc)
     db_session.commit()
     
-    from ibkr_tax.models.database import FXFIFOLot, FXGain
     lot = FXFIFOLot(
         account_id=acc.id, currency="USD", acquisition_date="2024-01-01",
         original_amount=Decimal("1000"), remaining_amount=Decimal("0"),
@@ -220,26 +214,23 @@ def test_fx_gains_sheet_export(db_session, tmp_path):
     db_session.add(gain)
     db_session.commit()
     
-    # 2. Export
     report = TaxReport(account_id="U_FX_EXPORT_TEST", tax_year=2024)
     output_file = str(tmp_path / "fx_export_test.xlsx")
     
     service = ExcelExportService(db_session)
     service.export(report, output_file)
     
-    # 3. Verify
     wb = load_workbook(output_file)
     assert "Währungsgewinne (§ 23 EStG)" in wb.sheetnames
     ws = wb["Währungsgewinne (§ 23 EStG)"]
     
     rows = list(ws.iter_rows(min_row=2, values_only=True))
     assert len(rows) == 1
-    assert rows[0][0] == "2024-02-01" # Disposal Date
-    assert rows[0][1] == "USD" # Currency
-    assert rows[0][8] == "JA" # Taxable?
+    assert rows[0][0] == "2024-02-01"
+    assert rows[0][1] == "USD"
+    assert rows[0][8] == "JA"
 
 def test_gains_detail_buy_date_column(db_session, tmp_path):
-    # Setup data
     acc = _build_minimal_db(db_session)
     report = TaxReport(account_id=acc.account_id, tax_year=2024)
     output_file = str(tmp_path / "buy_date_test.xlsx")
@@ -248,17 +239,13 @@ def test_gains_detail_buy_date_column(db_session, tmp_path):
     service.export(report, output_file)
     
     wb = load_workbook(output_file)
-    ws = wb["Gains Detail"]
+    ws = wb["Aktienveräußerungen (Mat.)"]
     
-    # Verify Headers
     assert ws.cell(row=1, column=1).value == "Verkaufsdatum"
     assert ws.cell(row=1, column=2).value == "Anschaffungsdatum"
-    
-    # Verify Content
-    # Row 2 should be AAPL (sorted by settle_date 2024-01-03)
-    # AAPL buy date from _build_minimal_db is 2023-12-22
     assert ws.cell(row=2, column=1).value == "2024-01-03"
     assert ws.cell(row=2, column=2).value == "2023-12-22"
+
     
     # Row 3 should be MSFT (sorted by settle_date 2024-06-12)
     # MSFT buy date from _build_minimal_db is 2024-01-12

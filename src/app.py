@@ -203,7 +203,9 @@ with tabs[2]:
                         "Price": float(p.trade_price) if p.trade_price else None,
                         "Proceeds": float(p.proceeds) if p.proceeds else None,
                         "Comm": float(p.ib_commission) if p.ib_commission else None,
+                        "Trading Costs": float(p.trading_costs_total) if p.trading_costs_total else 0.0,
                         "FX": float(p.fx_rate_to_base) if p.fx_rate_to_base else None,
+
                         "Date": p.acquisition_date,
                         "Desc": p.description,
                     })
@@ -261,13 +263,16 @@ with tabs[2]:
                 with col_settle:
                     mp_settle_date = st.date_input("Settlement Date", key="mp_date_input")
 
-                col_proceeds, col_comm = st.columns(2)
+                col_proceeds, col_comm, col_trcosts = st.columns(3)
                 with col_proceeds:
                     mp_proceeds = st.number_input("Proceeds", value=0.0, step=0.01, format="%.4f", key="mp_proceeds")
                 with col_comm:
-                    mp_comm = st.number_input("Commission", value=0.0, step=0.01, format="%.4f", key="mp_comm")
+                    mp_comm = st.number_input("IB Commission (Trade)", value=0.0, step=0.01, format="%.4f", key="mp_comm")
+                with col_trcosts:
+                    mp_trading_costs = st.number_input("Total Trading Costs (EUR)", value=0.0, step=0.01, format="%.4f", key="mp_trading_costs_total")
 
                 mp_desc = st.text_input("Description (optional)", value="", key="mp_desc")
+
 
 
                 submitted = st.form_submit_button("➕ Add Manual Position")
@@ -295,7 +300,9 @@ with tabs[2]:
 
                                 buy_sell=mp_buy_sell,
                                 open_close_indicator=mp_open_close,
+                                trading_costs_total=Decimal(str(mp_trading_costs))
                             )
+
                         st.success(f"Added {mp_qty} {mp_symbol.upper()} manual entry. Re-run FIFO Engine to include.")
                         # Clear prefill state after success
                         for key in ["mp_symbol_input", "mp_qty_input", "mp_date_input", "mp_trade_date", "mp_buy_sell", "mp_open_close"]:
@@ -344,15 +351,17 @@ with tabs[3]:
                         # Check for warnings
                         can_show_report = True
                         
-                        def set_prefill_state(sym, q, dt_str):
+                        def set_prefill_state(sym, cat, q, dt_str):
                             from datetime import date
                             st.session_state["mp_symbol_input"] = sym
+                            st.session_state["mp_asset_cat"] = cat
                             st.session_state["mp_qty_input"] = float(abs(q))
                             st.session_state["mp_date_input"] = date.fromisoformat(dt_str)
                             st.session_state["mp_trade_date"] = date.fromisoformat(dt_str)
                             # Smart prefill: if we miss an opening for a SELL, prefill BUY + Open
                             st.session_state["mp_buy_sell"] = "BUY"
                             st.session_state["mp_open_close"] = "O"
+
 
 
                         if report.missing_cost_basis_warnings:
@@ -364,7 +373,8 @@ with tabs[3]:
                                     # Use st.code so the user instantly gets a copy button next to the text
                                     st.code(warning.message, language="markdown")
                                 with w_col2:
-                                    if st.button("📝 Prefill Manual", key=f"prefill_{warning.trade_id}", on_click=set_prefill_state, args=(warning.symbol, warning.quantity, warning.date)):
+                                    if st.button("📝 Prefill Manual", key=f"prefill_{warning.trade_id}", on_click=set_prefill_state, args=(warning.symbol, warning.asset_category, warning.quantity, warning.date)):
+
                                         st.success(f"Prefilled {warning.symbol}! Go to **📝 Manual Positions** tab.")
                             
                             st.info("💡 You can provide cost basis for these positions in the **📝 Manual Positions** tab, then re-run the FIFO Engine.")
@@ -376,9 +386,9 @@ with tabs[3]:
                             # Display Metrics
                             st.subheader(f"Report Summary for {account_id} ({tax_year})")
                             m1, m2, m3 = st.columns(3)
-                            m1.metric("KAP Line 7 (Kapitalerträge)", f"{report.kap_line_7_kapitalertraege:,.2f} €", help=KAP_TOOLTIPS["kap_line_7"])
-                            m2.metric("KAP Line 8 (Gewinne Aktien)", f"{report.kap_line_8_gewinne_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_8"])
-                            m3.metric("KAP Line 9 (Verluste Aktien)", f"{report.kap_line_9_verluste_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_9"])
+                            m1.metric("KAP Line 7 (Dividenden / Zinsen / Ausgleichszahlungen / Sonstige)", f"{report.kap_line_7_kapitalertraege:,.2f} €", help=KAP_TOOLTIPS["kap_line_7"])
+                            m2.metric("KAP Line 8 (Aktien-Veräußerungsgewinne)", f"{report.kap_line_8_gewinne_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_8"])
+                            m3.metric("KAP Line 9 (Aktien-Veräußerungsverluste)", f"{report.kap_line_9_verluste_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_9"])
                             
                             m4, m5, m6 = st.columns(3)
                             m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €", help=KAP_TOOLTIPS["kap_line_10"])
@@ -400,11 +410,12 @@ with tabs[3]:
                                 st.markdown(
                                     "| Zeile | Bezeichnung | Erklärung |\n"
                                     "|---|---|---|\n"
-                                    "| **7** | Kapitalerträge | Dividenden, Zinsen und sonstige Gewinne (ETFs, Anleihen) |\n"
+                                    "| **7** | Kapitalerträge | Dividenden, Zinsen, Ausgleichszahlungen und sonstige Gewinne (ETFs, Anleihen) |\n"
                                     "| **8** | Gewinne Aktien | Nur positive Gewinne aus Einzelaktien-Verkäufen |\n"
                                     "| **9** | Verluste Aktien | Aktienverluste (Absolutwert) — nur mit Aktiengewinnen verrechenbar |\n"
                                     "| **10** | Termingeschäfte | Netto-Ergebnis aus Optionen und Futures |\n"
-                                    "| **15** | Quellensteuer | Ausländische Steuern — anrechenbar auf die deutsche Steuer |\n"
+                                    "| **15** | Quellensteuer | Anrechenbare ausländische Steuern (z.B. US-Withholding Tax) |\n"
+
                                     "\n"
                                     '> 📖 Ausführliche Erklärungen finden Sie im Tab **"Tax Guide"** und in der Datei `docs/GERMAN_TAX_THEORY.md`.'
                                 )

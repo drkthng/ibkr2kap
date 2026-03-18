@@ -111,7 +111,9 @@ class ManualPosition(Base):
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     acquisition_date: Mapped[str] = mapped_column()  # ISO date YYYY-MM-DD (Settlement)
     trade_date: Mapped[str | None] = mapped_column(nullable=True)
-    cost_basis_total_eur: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    # New transparency field
+    trading_costs_total: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True, default=Decimal("0"))
+
     description: Mapped[str] = mapped_column(default="Manual Opening Position")
     
     # New fields to mirror IBKR trades
@@ -141,8 +143,9 @@ class FIFOLot(Base):
     settle_date: Mapped[str] = mapped_column(index=True)
     original_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     remaining_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
-    cost_basis_total: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     cost_basis_per_share: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    trading_costs_total: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"))
+
 
     trade: Mapped["Trade"] = relationship(back_populates="fifo_lots")
     corporate_action: Mapped["CorporateAction"] = relationship(back_populates="fifo_lots")
@@ -162,7 +165,11 @@ class Gain(Base):
     proceeds: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     cost_basis_matched: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     realized_pnl: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    buy_comm: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"))
+    sell_comm: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"))
     tax_pool: Mapped[str] = mapped_column()  # Enum: Aktien, Termingeschäfte, Sonstige
+
+
 
     sell_trade: Mapped["Trade"] = relationship(back_populates="gains")
     buy_lot: Mapped["FIFOLot"] = relationship(back_populates="gains")

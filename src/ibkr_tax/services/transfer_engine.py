@@ -63,7 +63,9 @@ class TransferEngine:
                 remaining_quantity=quantity,
                 cost_basis_total=cost_basis_total,
                 cost_basis_per_share=cost_basis_per_share,
+                trading_costs_total=Decimal("0")
             )
+
             self.session.add(lot)
             lots_created += 1
 
@@ -101,6 +103,8 @@ class TransferEngine:
             remaining_quantity=quantity,
             cost_basis_total=cost_basis_total,
             cost_basis_per_share=cost_basis_per_share,
+            trading_costs_total=Decimal("0")
         )
+
         self.session.add(lot)
         self.session.flush()

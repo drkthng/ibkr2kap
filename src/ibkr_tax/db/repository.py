@@ -216,6 +216,7 @@ def add_manual_position(
     ib_commission=0,
     buy_sell: str | None = None,
     open_close_indicator: str | None = None,
+    trading_costs_total=Decimal("0"),
 
 ) -> ManualPosition:
     """Creates and commits a new ManualPosition record."""
@@ -236,9 +237,10 @@ def add_manual_position(
         ib_commission=ib_commission,
         buy_sell=buy_sell,
         open_close_indicator=open_close_indicator,
+        trading_costs_total=trading_costs_total,
     )
-    session.add(mp)
     session.commit()
+
     return mp
 
 

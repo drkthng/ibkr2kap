@@ -1,3 +1,4 @@
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import select, asc, delete
 from ibkr_tax.models.database import Account, Trade, FIFOLot, Gain, CorporateAction, Transfer, ManualPosition
@@ -174,9 +175,17 @@ class FIFORunner:
 
         # Legacy / Simple Opening Lot logic
         quantity = mp.quantity
-        cost_basis = mp.cost_basis_total_eur
+        # Use explicit cost basis if provided, else calculate from proceeds/FX, else 0
+        if mp.cost_basis_total_eur is not None:
+            cost_basis = mp.cost_basis_total_eur
+        elif mp.proceeds is not None:
+            cost_basis = abs(mp.proceeds) * (mp.fx_rate_to_base or 1.0)
+        else:
+            cost_basis = Decimal("0")
+
         if quantity == 0:
             return
+
         lot = FIFOLot(
             trade_id=None,
             corporate_action_id=None,
@@ -187,9 +196,12 @@ class FIFORunner:
             settle_date=mp.acquisition_date,
             original_quantity=quantity,
             remaining_quantity=quantity,
-            cost_basis_total=cost_basis or (mp.proceeds * mp.fx_rate_to_base) if mp.proceeds else 0,
-            cost_basis_per_share=(cost_basis or (mp.proceeds * mp.fx_rate_to_base)) / abs(quantity) if quantity != 0 else 0,
+            cost_basis_total=cost_basis,
+            cost_basis_per_share=cost_basis / abs(quantity) if quantity != 0 else Decimal("0"),
+            trading_costs_total=mp.trading_costs_total or Decimal("0")
         )
+
+
         self.session.add(lot)
         self.session.flush()
 

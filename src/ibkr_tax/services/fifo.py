@@ -41,8 +41,10 @@ class FIFOEngine:
             original_quantity=quantity,
             remaining_quantity=quantity,
             cost_basis_total=cost_basis_eur,
-            cost_basis_per_share=cost_basis_eur / abs(quantity) if quantity != 0 else Decimal("0")
+            cost_basis_per_share=cost_basis_eur / abs(quantity) if quantity != 0 else Decimal("0"),
+            trading_costs_total=(abs(trade.ib_commission) + abs(trade.taxes)) * trade.fx_rate_to_base * proportion
         )
+
         self.session.add(lot)
         self.session.flush()
 
@@ -120,6 +122,10 @@ class FIFOEngine:
                 real_proceeds = cost_basis_matched
                 real_cost = -proceeds_matched
             
+            # Proportional trading costs
+            buy_side_comm = (matched_qty / abs(lot.original_quantity)) * lot.trading_costs_total
+            sell_side_comm = (matched_qty / quantity_to_match) * (abs(trade.ib_commission) + abs(trade.taxes)) * trade.fx_rate_to_base
+
             gain = Gain(
                 sell_trade_id=trade.id,
                 buy_lot_id=lot.id,
@@ -128,8 +134,12 @@ class FIFOEngine:
                 proceeds=real_proceeds,
                 cost_basis_matched=real_cost,
                 realized_pnl=pnl,
+                buy_comm=buy_side_comm,
+                sell_comm=sell_side_comm,
                 tax_pool=self._determine_tax_pool(trade)
             )
+
+
             self.session.add(gain)
             
             # Update lot
