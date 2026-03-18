@@ -197,11 +197,15 @@ with tabs[2]:
                     rows.append({
                         "ID": p.id,
                         "Symbol": p.symbol,
+                        "B/S": p.buy_sell or "",
                         "Category": p.asset_category,
-                        "Quantity": float(p.quantity),
-                        "Acquisition Date": p.acquisition_date,
-                        "Cost Basis (EUR)": float(p.cost_basis_total_eur),
-                        "Description": p.description,
+                        "Qty": float(p.quantity),
+                        "Price": float(p.trade_price) if p.trade_price else None,
+                        "Proceeds": float(p.proceeds) if p.proceeds else None,
+                        "Comm": float(p.ib_commission) if p.ib_commission else None,
+                        "FX": float(p.fx_rate_to_base) if p.fx_rate_to_base else None,
+                        "Date": p.acquisition_date,
+                        "Desc": p.description,
                     })
                 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
