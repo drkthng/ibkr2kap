@@ -5,13 +5,12 @@
 
 ## Current Position
 - **Phase**: 31 (Advanced Manual Entry Fields)
-- **Task**: Planning complete
-- **Status**: Ready for execution
+- **Status**: Completed
+- **Last Action**: Implemented full trade detail support for manual entries and integrated them into the FIFO engine as synthetic trades.
 
 ## Last Session Summary
-- Created `phase-31` branch.
-- Authored 31-PLAN.md covering Schema, UI, and FIFO Engine integration.
 - Updated `ROADMAP.md` and `STATE.md`.
 
 ## Next Steps
-1. /execute 31
+- [ ] Merge `phase-31` into `main`.
+- [ ] Plan Phase 32 (if applicable).
