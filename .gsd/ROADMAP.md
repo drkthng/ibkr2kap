@@ -69,7 +69,7 @@
 - [x] Phase 29: FX Engine Redesign (Anlage SO)
 - [x] Phase 30: UX Improvements (Selectability, Prefill, Multi-file Import)
 - [x] Phase 31: Advanced Manual Entry Fields (Full trade detail support + manual closing trades)
-- [x] Phase 32: Dividend & Interest Details (Excel Tab with row-level transparency)
+- [x] Phase 33: Tax Compliance (Margin Interest & Deductions)
 
 
 ## Future Milestone: v2.0 (Planned)

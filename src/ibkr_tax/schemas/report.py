@@ -43,6 +43,9 @@ class TaxReport(BaseModel):
     so_fx_gains_tax_free: Decimal = Field(default=Decimal("0.00"))
     so_fx_freigrenze_applies: bool = Field(default=False)
 
+    # Informational: Margin interest paid (not deductible per § 20 Abs. 9 EStG)
+    margin_interest_paid: Decimal = Field(default=Decimal("0.00"))
+
     # Summary Field
     total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
 

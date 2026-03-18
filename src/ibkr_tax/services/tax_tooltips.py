@@ -7,9 +7,10 @@ It has no external dependencies — it's a standalone constants reference.
 
 KAP_TOOLTIPS: dict[str, str] = {
     "kap_line_7": (
-        "Zeile 7 — Kapitalerträge: Summe aus Dividenden, Zinsen und "
+        "Zeile 7 — Kapitalerträge: Summe aus Dividenden, Zinsen (inkl. Broker Interest Received) und "
         "Gewinnen/Verlusten aus sonstigen Wertpapieren (z. B. ETFs, Anleihen). "
-        "Aktienergebnisse und Termingeschäfte gehören nicht hierher."
+        "Margin-Zinsen (Broker Interest Paid) sind gemäß § 20 Abs. 9 EStG "
+        "nicht abzugsfähig und daher NICHT enthalten."
     ),
     "kap_line_8": (
         "Zeile 8 — Gewinne aus Aktienveräußerungen: Nur die positiven "

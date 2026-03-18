@@ -70,11 +70,25 @@ class TaxAggregatorService:
 
         dividends_interest = Decimal("0.00")
         withholding_tax = Decimal("0.00")
+        margin_interest_paid = Decimal("0.00")
 
         for ctx in cash_txs:
-            # Type names are from Flex Query: 'Dividends', 'Withholding Tax', 'Payment In Lieu of Dividends', 'Broker Interest Paid/Received'
-            if ctx.type in ["Dividends", "Payment In Lieu of Dividends", "Broker Interest Paid/Received"]:
-                # Note: IBKR reports paid interest as negative. For Line 7 we want the net interest/dividends.
+            # Type names vary by source:
+            #   CSV:  'Dividends', 'Withholding Tax', 'Broker Interest Paid', 'Broker Interest Received', etc.
+            #   XML (ibflex): 'Dividends', 'Withholding Tax', 'Broker Interest Paid/Received', etc.
+            #
+            # § 20 Abs. 9 EStG: Margin interest PAID is non-deductible Werbungskosten.
+            # Broker interest RECEIVED is taxable Zinserträge → KAP Line 7.
+            if ctx.type == "Broker Interest Paid":
+                # CSV path: explicit paid type → always margin cost
+                margin_interest_paid += abs(ctx.amount * ctx.fx_rate_to_base)
+            elif ctx.type == "Broker Interest Paid/Received":
+                # XML/ibflex path: combined type, use amount sign to distinguish
+                if ctx.amount < 0:
+                    margin_interest_paid += abs(ctx.amount * ctx.fx_rate_to_base)
+                else:
+                    dividends_interest += ctx.amount * ctx.fx_rate_to_base
+            elif ctx.type in ["Dividends", "Payment In Lieu of Dividends", "Broker Interest Received"]:
                 dividends_interest += ctx.amount * ctx.fx_rate_to_base
             elif ctx.type == "Withholding Tax":
                 # Withholding tax is negative (money out). Line 15 is positive (tax credit).
@@ -158,6 +172,7 @@ class TaxAggregatorService:
             so_fx_gains_taxable_1y=so_fx_taxable,
             so_fx_gains_tax_free=so_fx_tax_free,
             so_fx_freigrenze_applies=so_freigrenze_applies,
+            margin_interest_paid=margin_interest_paid,
             total_realized_pnl=total_pnl + so_fx_total,
             missing_cost_basis_warnings=warnings
         )

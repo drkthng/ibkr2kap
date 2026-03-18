@@ -113,6 +113,7 @@ class ManualPosition(Base):
     trade_date: Mapped[str | None] = mapped_column(nullable=True)
     # New transparency field
     trading_costs_total: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True, default=Decimal("0"))
+    cost_basis_total_eur: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     description: Mapped[str] = mapped_column(default="Manual Opening Position")
     
@@ -143,6 +144,7 @@ class FIFOLot(Base):
     settle_date: Mapped[str] = mapped_column(index=True)
     original_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     remaining_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    cost_basis_total: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     cost_basis_per_share: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     trading_costs_total: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"))
 

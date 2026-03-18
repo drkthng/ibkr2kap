@@ -46,10 +46,13 @@ class ExcelExportService:
         # 4. Dividends & Interest
         self._add_cash_details_sheet(wb, report)
         
-        # 5. FX Gains (§ 23)
+        # 5. Margin Interest (informational, non-deductible)
+        self._add_margin_interest_sheet(wb, report)
+        
+        # 6. FX Gains (§ 23)
         self._add_fx_gains_sheet(wb, report)
         
-        # 6. Audit Trail: All Trades
+        # 7. Audit Trail: All Trades
         self._add_audit_trail_sheet(wb, report)
 
         wb.save(output_path)
@@ -173,6 +176,9 @@ class ExcelExportService:
             cell.fill = self.header_fill
             
 
+        # Margin interest types to exclude from this sheet (shown in separate Marginkosten sheet)
+        margin_types = {"Broker Interest Paid"}
+
         stmt = (
             select(CashTransaction)
             .join(Account, CashTransaction.account_id == Account.id)
@@ -180,7 +186,13 @@ class ExcelExportService:
             .where(CashTransaction.settle_date.like(f"{report.tax_year}%"))
             .order_by(CashTransaction.settle_date.asc())
         )
-        txs = self.session.execute(stmt).scalars().all()
+        all_txs = self.session.execute(stmt).scalars().all()
+        # Filter: exclude explicit 'Broker Interest Paid' and negative 'Broker Interest Paid/Received'
+        txs = [
+            ct for ct in all_txs
+            if ct.type not in margin_types
+            and not (ct.type == "Broker Interest Paid/Received" and ct.amount < 0)
+        ]
         
         for r_idx, ct in enumerate(txs, 2):
             ws.cell(row=r_idx, column=1).value = ct.settle_date
@@ -211,6 +223,77 @@ class ExcelExportService:
         ws.freeze_panes = "A2"
         ws.column_dimensions["C"].width = 40
         for col in ["A", "B", "D", "E", "F", "G", "H", "I"]:
+            ws.column_dimensions[col].width = 15
+
+    def _add_margin_interest_sheet(self, wb, report):
+        """Informational sheet for margin interest paid — not deductible per § 20 Abs. 9 EStG."""
+        ws = wb.create_sheet("Marginkosten (Info)")
+
+        # Header note
+        ws.merge_cells("A1:G1")
+        note_cell = ws["A1"]
+        note_cell.value = (
+            "⚠️ Marginzinsen (Broker Interest Paid) sind gemäß § 20 Abs. 9 EStG "
+            "nicht als Werbungskosten abzugsfähig und fließen NICHT in die Anlage KAP ein."
+        )
+        note_cell.font = Font(bold=True, color="CC0000")
+        note_cell.alignment = Alignment(wrap_text=True)
+        ws.row_dimensions[1].height = 40
+
+        # Summary row
+        ws["A3"] = "Gesamt Marginzinsen (EUR):"
+        ws["A3"].font = self.bold_font
+        summary_cell = ws["B3"]
+        summary_cell.value = report.margin_interest_paid
+        summary_cell.number_format = self.euro_format
+        summary_cell.font = self.bold_font
+
+        # Detail headers
+        detail_headers = [
+            "Zahlungsdatum", "Symbol", "Beschreibung", "Währung",
+            "Betrag (Brutto)", "FX Rate", "Betrag (EUR)"
+        ]
+        for col_idx, header in enumerate(detail_headers, 1):
+            cell = ws.cell(row=5, column=col_idx)
+            cell.value = header
+            cell.font = self.bold_font
+            cell.fill = self.header_fill
+
+        # Fetch margin interest transactions
+        margin_types = {"Broker Interest Paid"}
+        stmt = (
+            select(CashTransaction)
+            .join(Account, CashTransaction.account_id == Account.id)
+            .where(Account.account_id == report.account_id)
+            .where(CashTransaction.settle_date.like(f"{report.tax_year}%"))
+            .order_by(CashTransaction.settle_date.asc())
+        )
+        all_txs = self.session.execute(stmt).scalars().all()
+        margin_txs = [
+            ct for ct in all_txs
+            if ct.type in margin_types
+            or (ct.type == "Broker Interest Paid/Received" and ct.amount < 0)
+        ]
+
+        for r_idx, ct in enumerate(margin_txs, 6):
+            ws.cell(row=r_idx, column=1).value = ct.settle_date
+            ws.cell(row=r_idx, column=2).value = ct.symbol or "--"
+            ws.cell(row=r_idx, column=3).value = ct.description
+            ws.cell(row=r_idx, column=4).value = ct.currency
+
+            amt_cell = ws.cell(row=r_idx, column=5)
+            amt_cell.value = ct.amount
+            amt_cell.number_format = self.qty_format
+
+            ws.cell(row=r_idx, column=6).value = ct.fx_rate_to_base
+
+            eur_cell = ws.cell(row=r_idx, column=7)
+            eur_cell.value = abs(ct.amount * ct.fx_rate_to_base)
+            eur_cell.number_format = self.euro_format
+
+        ws.freeze_panes = "A6"
+        ws.column_dimensions["C"].width = 40
+        for col in ["A", "B", "D", "E", "F", "G"]:
             ws.column_dimensions[col].width = 15
 
     def _add_fx_gains_sheet(self, wb, report):

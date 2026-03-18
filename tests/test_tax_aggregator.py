@@ -196,3 +196,45 @@ def test_generate_report_no_fx_warnings_per_redesign(db_session):
 
     # 3. Assertions: FX warnings are removed per Phase 29 redesign
     assert len(report.missing_cost_basis_warnings) == 0
+
+def test_margin_interest_handling(db_session):
+    # 1. Setup Data: Mixture of paid and received interest (CSV and XML styles)
+    acc = Account(account_id="U8888888")
+    db_session.add(acc)
+    db_session.commit()
+
+    # XML style: combined type, distinguished by sign
+    c1 = CashTransaction(account_id=acc.id, symbol="--", description="Margin Interest (Paid)", 
+                         date_time="2024-06-01", settle_date="2024-06-01", amount=Decimal("-50.00"), 
+                         type="Broker Interest Paid/Received", currency="EUR", fx_rate_to_base=Decimal("1.0"),
+                         report_date="2024-06-01")
+    
+    c2 = CashTransaction(account_id=acc.id, symbol="--", description="Broker Interest (Received)", 
+                         date_time="2024-06-15", settle_date="2024-06-15", amount=Decimal("10.00"), 
+                         type="Broker Interest Paid/Received", currency="EUR", fx_rate_to_base=Decimal("1.0"),
+                         report_date="2024-06-15")
+
+    # CSV style: separate types
+    c3 = CashTransaction(account_id=acc.id, symbol="--", description="Margin Interest (Paid CSV)", 
+                         date_time="2024-07-01", settle_date="2024-07-01", amount=Decimal("-30.00"), 
+                         type="Broker Interest Paid", currency="EUR", fx_rate_to_base=Decimal("1.0"),
+                         report_date="2024-07-01")
+    
+    c4 = CashTransaction(account_id=acc.id, symbol="--", description="Broker Interest (Received CSV)", 
+                         date_time="2024-07-15", settle_date="2024-07-15", amount=Decimal("20.00"), 
+                         type="Broker Interest Received", currency="EUR", fx_rate_to_base=Decimal("1.0"),
+                         report_date="2024-07-15")
+
+    db_session.add_all([c1, c2, c3, c4])
+    db_session.commit()
+
+    # 2. Run Aggregator
+    service = TaxAggregatorService(db_session)
+    report = service.generate_report("U8888888", 2024)
+
+    # 3. Assertions
+    # Line 7 should include received interest: 10 + 20 = 30
+    assert report.kap_line_7_kapitalertraege == Decimal("30.00")
+    
+    # Informational field should include absolute paid interest: 50 + 30 = 80
+    assert report.margin_interest_paid == Decimal("80.00")

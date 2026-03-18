@@ -406,6 +406,22 @@ with tabs[3]:
                             elif report.so_fx_gains_taxable_1y >= 1000:
                                 st.warning("⚠️ **Freigrenze überschritten**: Gewinne ab 1.000 € sind voll steuerpflichtig.")
 
+                            # Margin Interest (informational)
+                            if report.margin_interest_paid > 0:
+                                st.subheader("💰 Marginkosten (Info)")
+                                st.metric(
+                                    "Margin-Zinsen (Broker Interest Paid)",
+                                    f"{report.margin_interest_paid:,.2f} €",
+                                    help="Nicht in Anlage KAP enthalten — Marginzinsen sind gemäß § 20 Abs. 9 EStG nicht als Werbungskosten abzugsfähig."
+                                )
+                                st.warning(
+                                    "⚠️ **Nicht abzugsfähig**: Margin-Zinsen (Broker Interest Paid) stellen "
+                                    "Werbungskosten dar, die gemäß § 20 Abs. 9 EStG nicht von Kapitalerträgen "
+                                    "abgezogen werden dürfen. Dieser Betrag ist rein informativ und fließt "
+                                    "**nicht** in die Berechnung der Anlage KAP ein. Details im Excel-Export "
+                                    "auf dem Blatt **Marginkosten (Info)**."
+                                )
+
                             with st.expander("ℹ️ Was bedeuten diese Zeilen?"):
                                 st.markdown(
                                     "| Zeile | Bezeichnung | Erklärung |\n"

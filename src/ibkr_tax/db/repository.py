@@ -241,6 +241,7 @@ def add_manual_position(
         open_close_indicator=open_close_indicator,
         trading_costs_total=trading_costs_total,
     )
+    session.add(mp)
     session.commit()
 
     return mp
