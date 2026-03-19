@@ -51,3 +51,31 @@ class TaxReport(BaseModel):
 
     # Warnings
     missing_cost_basis_warnings: list[MissingCostBasisWarning] = Field(default_factory=list)
+
+class CombinedTaxReport(BaseModel):
+    """
+    Combined report for multiple accounts.
+    """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    account_ids: list[str]
+    tax_year: int
+
+    # Combined totals (same fields as TaxReport)
+    kap_line_7_kapitalertraege: Decimal = Field(default=Decimal("0.00"))
+    kap_line_8_gewinne_aktien: Decimal = Field(default=Decimal("0.00"))
+    kap_line_9_verluste_aktien: Decimal = Field(default=Decimal("0.00"))
+    kap_line_10_termingeschaefte: Decimal = Field(default=Decimal("0.00"))
+    kap_line_15_quellensteuer: Decimal = Field(default=Decimal("0.00"))
+    
+    so_fx_gains_total: Decimal = Field(default=Decimal("0.00"))
+    so_fx_gains_taxable_1y: Decimal = Field(default=Decimal("0.00"))
+    so_fx_gains_tax_free: Decimal = Field(default=Decimal("0.00"))
+    so_fx_freigrenze_applies: bool = Field(default=False)
+
+    margin_interest_paid: Decimal = Field(default=Decimal("0.00"))
+    total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
+
+    # Breakdowns
+    per_account_reports: list[TaxReport] = Field(default_factory=list)
+    missing_cost_basis_warnings: list[MissingCostBasisWarning] = Field(default_factory=list)
