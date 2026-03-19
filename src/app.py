@@ -235,7 +235,7 @@ with tabs[2]:
             # --- Add form ---
             st.divider()
             st.subheader("Add New Manual Position")
-            with st.form("add_manual_position_form", clear_on_submit=True):
+            with st.form("add_manual_position_form", clear_on_submit=False):
                 col_sym, col_cat, col_bs, col_oc = st.columns([2, 1, 1, 1])
                 with col_sym:
                     mp_symbol = st.text_input("Symbol (e.g. AAPL)", key="mp_symbol_input")
@@ -248,8 +248,7 @@ with tabs[2]:
 
                 col_qty, col_price, col_curr, col_fx = st.columns(4)
                 with col_qty:
-                    default_qty = 100.0 if "mp_qty_input" not in st.session_state else st.session_state["mp_qty_input"]
-                    mp_qty = st.number_input("Quantity", min_value=0.0001, value=default_qty, step=1.0, format="%.4f", key="mp_qty_input")
+                    mp_qty = st.number_input("Quantity", min_value=0.0001, step=1.0, format="%.4f", key="mp_qty_input")
                 with col_price:
                     mp_price = st.number_input("Trade Price", min_value=0.0, step=0.01, format="%.4f", key="mp_price")
                 with col_curr:
@@ -300,9 +299,12 @@ with tabs[2]:
                                 open_close_indicator=mp_open_close,
                             )
 
-                        st.success(f"Added {mp_qty} {mp_symbol.upper()} manual entry. Re-run FIFO Engine to include.")
                         # Clear prefill state after success
-                        for key in ["mp_symbol_input", "mp_qty_input", "mp_date_input", "mp_trade_date", "mp_buy_sell", "mp_open_close"]:
+                        for key in [
+                            "mp_symbol_input", "mp_asset_cat", "mp_buy_sell", "mp_open_close",
+                            "mp_qty_input", "mp_price", "mp_currency", "mp_fx_rate",
+                            "mp_trade_date", "mp_date_input", "mp_proceeds", "mp_comm", "mp_desc"
+                        ]:
                             if key in st.session_state:
                                 del st.session_state[key]
                         st.rerun()
@@ -358,6 +360,13 @@ with tabs[3]:
                             # Smart prefill: if we miss an opening for a SELL, prefill BUY + Open
                             st.session_state["mp_buy_sell"] = "BUY"
                             st.session_state["mp_open_close"] = "O"
+                            # Also set defaults for other fields to ensure they are clean
+                            st.session_state["mp_price"] = 0.0
+                            st.session_state["mp_currency"] = "USD"
+                            st.session_state["mp_fx_rate"] = 1.0
+                            st.session_state["mp_proceeds"] = 0.0
+                            st.session_state["mp_comm"] = 0.0
+                            st.session_state["mp_desc"] = f"Manual cost basis for {sym}"
 
 
 
@@ -370,7 +379,7 @@ with tabs[3]:
                                     # Use st.code so the user instantly gets a copy button next to the text
                                     st.code(warning.message, language="markdown")
                                 with w_col2:
-                                    if st.button("📝 Prefill Manual", key=f"prefill_{warning.trade_id}", on_click=set_prefill_state, args=(warning.symbol, warning.asset_category, warning.quantity, warning.date)):
+                                    if st.button("📝 Prefill Manual", key=f"prefill_{warning.trade_id}_{warning.symbol}_{warning.date}", on_click=set_prefill_state, args=(warning.symbol, warning.asset_category, warning.quantity, warning.date)):
 
                                         st.success(f"Prefilled {warning.symbol}! Go to **📝 Manual Positions** tab.")
                             

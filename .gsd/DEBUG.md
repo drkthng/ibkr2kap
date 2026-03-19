@@ -64,5 +64,52 @@ When opening the app with the batch-file (not in the browser) then the creation 
 2. Reverted the `pywebview` engine to natively supported `gui='qt'`.
 3. In `src/app.py`, completely bypassed the browser download manager by using a native Python (`tkinter`) save dialog to write the exporter buffer straight to the hard drive on button click.
 4. Preserved `pythonw.exe` in `launch_windows.bat` so the batch file hides correctly.
-**Verified:** TBD
-**Regression Check:** TBD
+**Verified:** Verified native save dialog and file creation.
+**Regression Check:** N/A
+
+---
+
+# Debug Session: Manual Form Pre-fill Issue
+
+## Symptom
+When opening via batch file, when having multiple missing quotes, after adding one manually via the button pre-filling out the form, the next click on the pre-fill button does not pre-fill the manual form anymore.
+
+**When:** After submitting the manual position form once.
+**Expected:** Subsequent "Prefill Manual" clicks should populate the form with the new data.
+**Actual:** The form remains empty or shows old/stale data.
+
+## Hypotheses
+
+| # | Hypothesis | Likelihood | Status |
+|---|------------|------------|--------|
+| 1 | `clear_on_submit=True` conflicts with session state updates | 90% | CONFIRMED |
+| 2 | Incomplete clearing of session state keys on submission | 80% | CONFIRMED |
+| 3 | Non-unique pre-fill button keys caused Streamlit confusion | 40% | CONFIRMED |
+
+## Attempts
+
+### Attempt 1
+**Testing:** H1, H2, H3
+**Action:** 
+1. Removed `clear_on_submit=True` from `st.form`.
+2. Expanded the list of keys to delete in the submission handler to include all form fields.
+3. Updated `set_prefill_state` to explicitly set all fields, ensuring a clean slate.
+4. Made pre-fill button keys unique by appending symbol and date.
+**Result:** SUCCESS. Form now pre-fills reliably for multiple items.
+**Conclusion:** The combination of Streamlit's internal form clearing and manual session state manipulation was causing the state to get out of sync.
+
+## Resolution
+
+**Root Cause:** 
+1. `clear_on_submit=True` on `st.form` was aggressively clearing widgets in a way that sometimes ignored manual session state updates made in callbacks.
+2. The submission handler only deleted a subset of session state keys, leaving others (like `mp_asset_cat`) stale.
+3. Redundant `value=` arguments in some widgets conflicted with `key=` managed state.
+
+**Fix:**
+1. Switched to `clear_on_submit=False` and implemented manual clearing of ALL relevant session state keys.
+2. Standardized `set_prefill_state` to set a full set of default/pre-filled values.
+3. Ensured every form widget correctly binds to its session state `key`.
+4. Improved uniqueness of action button keys.
+
+**Verified:** Manually tested the flow with multiple warnings.
+**Regression Check:** Verified that single manual entries still work and the form is clean after submission.
