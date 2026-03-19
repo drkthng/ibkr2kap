@@ -82,7 +82,11 @@ class CombinedTaxReport(BaseModel):
     so_fx_freigrenze_applies: bool = Field(default=False)
 
     margin_interest_paid: Decimal = Field(default=Decimal("0.00"))
-    total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
+
+    aktien_net_result: Decimal = Field(default=Decimal("0.00"))
+    allgemeiner_topf_result: Decimal = Field(default=Decimal("0.00"))
+    dividends_interest_total: Decimal = Field(default=Decimal("0.00"))
+    sonstige_gains_total: Decimal = Field(default=Decimal("0.00"))
 
     # Breakdowns
     per_account_reports: list[TaxReport] = Field(default_factory=list)

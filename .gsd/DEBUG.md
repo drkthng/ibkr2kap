@@ -113,3 +113,41 @@ When opening via batch file, when having multiple missing quotes, after adding o
 
 **Verified:** Manually tested the flow with multiple warnings.
 **Regression Check:** Verified that single manual entries still work and the form is clean after submission.
+
+---
+
+# Debug Session: Multi-Account Reporting AttributeError
+
+## Symptom
+Error generating report: `'TaxReport' object has no attribute 'total_realized_pnl'`
+
+**When:** Formulating a combined report for multiple accounts.
+**Expected:** The combined report should be generated without errors.
+**Actual:** An `AttributeError` is thrown in `tax_aggregator.py`.
+
+## Hypotheses
+
+| # | Hypothesis | Likelihood | Status |
+|---|------------|------------|--------|
+| 1 | `total_realized_pnl` remnants in `CombinedTaxReport`, `TaxAggregatorService`, and `app.py` after phase remodel are causing the crash. | 100% | CONFIRMED |
+
+## Attempts
+
+### Attempt 1
+**Testing:** H1 — `total_realized_pnl` remnants.
+**Action:** Removed `total_realized_pnl` from `CombinedTaxReport` schema, `TaxAggregatorService.generate_combined_report()`, and `app.py`.
+**Result:** Code cleanly removed unused metrics.
+**Conclusion:** Resolved the AttributeError without side effects.
+
+## Resolution
+
+**Root Cause:**
+1. `total_realized_pnl` was removed from `TaxReport` in a previous phase to comply with German Tax Law aesthetics.
+2. The property was missed in `CombinedTaxReport` schema leading to runtime attribute errors during aggregation when summing over multiple accounts, and Streamlit display errors when rendering individual accounts inside the combined view.
+
+**Fix:**
+1. Cleaned `app.py` line 469 by adapting `st.columns(3)` to `st.columns(2)`.
+2. Removed from `report.py` `CombinedTaxReport`.
+3. Cleaned `tax_aggregator.py` aggregation loop.
+**Verified:** Syntax check and code analysis correct.
+**Regression Check:** N/A (Field intentionally removed system-wide).

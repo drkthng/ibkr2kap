@@ -463,10 +463,9 @@ with tabs[3]:
                                         am2.metric("KAP 8", f"{acc_rep.kap_line_8_gewinne_aktien:,.2f} €")
                                         am3.metric("KAP 9", f"{acc_rep.kap_line_9_verluste_aktien:,.2f} €")
                                         
-                                        am4, am5, am6 = st.columns(3)
+                                        am4, am5 = st.columns(2)
                                         am4.metric("KAP 10", f"{acc_rep.kap_line_10_termingeschaefte:,.2f} €")
                                         am5.metric("SO FX", f"{acc_rep.so_fx_gains_total:,.2f} €")
-                                        am6.metric("Total PnL", f"{acc_rep.total_realized_pnl:,.2f} €")
 
                             with st.expander("ℹ️ Was bedeuten diese Zeilen?"):
                                 st.markdown(

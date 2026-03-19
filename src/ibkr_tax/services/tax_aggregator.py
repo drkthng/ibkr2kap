@@ -211,7 +211,11 @@ class TaxAggregatorService:
             combined.so_fx_gains_tax_free += r.so_fx_gains_tax_free
             
             combined.margin_interest_paid += r.margin_interest_paid
-            combined.total_realized_pnl += r.total_realized_pnl
+            
+            combined.aktien_net_result += r.aktien_net_result
+            combined.allgemeiner_topf_result += r.allgemeiner_topf_result
+            combined.dividends_interest_total += r.dividends_interest_total
+            combined.sonstige_gains_total += r.sonstige_gains_total
             
             combined.missing_cost_basis_warnings.extend(r.missing_cost_basis_warnings)
 

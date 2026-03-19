@@ -303,8 +303,6 @@ def test_generate_combined_report_two_accounts(db_session):
     assert combined.kap_line_7_kapitalertraege == Decimal("140.00")
     # Combined KAP Line 8: 300 + 200 = 500
     assert combined.kap_line_8_gewinne_aktien == Decimal("500.00")
-    # Total PnL: 300 + 200 = 500
-    assert combined.total_realized_pnl == Decimal("500.00")
 
     # Verify per-account breakdowns
     report_a = next(r for r in combined.per_account_reports if r.account_id == "U_ACCT_A")

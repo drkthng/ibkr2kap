@@ -11,6 +11,7 @@
 ## session_2026_03_19_summary
 - **Phase 36**: Remodeled Tax Reports for "Zwei-Töpfe" compliance (German § 20 Abs. 6 EStG).
 - **Bug Fix**: Resolved manual form pre-fill synchronization issue (Conversation ff3846be).
+- **Bug Fix**: Resolved AttributeError in multi-account tax report generation due to missing tax pool summary fields (Aktientopf, Allgemeiner Topf).
 - **Verification**: All 18 tests passed, including E2E and Excel export.
 
 ## Next Steps
