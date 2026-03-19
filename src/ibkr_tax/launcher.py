@@ -6,6 +6,12 @@ import socket
 import os
 import signal
 
+# Handle windowless environment (pythonw.exe) where stdout/stderr are None
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, 'w')
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, 'w')
+
 def find_free_port():
     """Finds a free port on localhost."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -85,6 +91,9 @@ def main():
     print("Streamlit server is ready. Opening native window...")
     
     try:
+        # Enable downloads
+        webview.settings['ALLOW_DOWNLOADS'] = True
+
         # Create a native window pointing to the local streamlit server
         # We specify gui='qt' to ensure it uses PySide6/Qt if possible
         webview.create_window(
@@ -111,5 +120,12 @@ def main():
         # Close the log file
         log_file.close()
 
+import traceback
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        with open("launcher_crash.log", "w") as f:
+            traceback.print_exc(file=f)
+        sys.exit(1)

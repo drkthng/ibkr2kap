@@ -438,20 +438,34 @@ with tabs[3]:
                             st.subheader("📥 Export to Excel")
                             
                             exporter = ExcelExportService(session)
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-                                tmp_path = tmp.name
                             
-                            exporter.export(report, tmp_path)
+                            exporter = ExcelExportService(session)
+                            fname = f"Anlage_KAP_{account_id}_{tax_year}.xlsx"
                             
-                            with open(tmp_path, "rb") as f:
-                                btn = st.download_button(
-                                    label="Download Anlage KAP Excel Report",
-                                    data=f,
-                                    file_name=f"Anlage_KAP_{account_id}_{tax_year}.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            if st.button("💾 Save Anlage KAP Excel Report", type="primary"):
+                                import tkinter as tk
+                                from tkinter import filedialog
+                                
+                                # Use Tkinter to show a native OS Save Dialog. 
+                                # This bypasses all problematic browser download managers!
+                                root = tk.Tk()
+                                root.withdraw()
+                                root.wm_attributes('-topmost', 1)
+                                
+                                save_path = filedialog.asksaveasfilename(
+                                    initialfile=fname,
+                                    defaultextension=".xlsx",
+                                    filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                                    title="Save Anlage KAP Report"
                                 )
-                            
-                            os.remove(tmp_path)
+                                root.destroy()
+                                
+                                if save_path:
+                                    exporter.export(report, save_path)
+                                    st.success(f"Report saved successfully to `{save_path}`!")
+                                    st.info("You can now open the file in Excel.")
+                                else:
+                                    st.warning("Save was cancelled.")
                         
                 except Exception as e:
                     st.error(f"Error generating report: {e}")

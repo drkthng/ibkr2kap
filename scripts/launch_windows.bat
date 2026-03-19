@@ -15,12 +15,14 @@ if not exist ".venv" (
     exit /b 1
 )
 
-:: Run launcher using venv python
-:: We use start /b to keep the console window hidden if it opens
-".venv\Scripts\python.exe" "src\ibkr_tax\launcher.py"
+:: Run launcher using venv python (windowless)
+:: We use start "" /b to detach and allow the console to close immediately
+start "" /b ".venv\Scripts\pythonw.exe" "src\ibkr_tax\launcher.py"
 
 if %ERRORLEVEL% neq 0 (
     echo.
     echo Application failed to start.
     pause
 )
+
+exit /b 0
