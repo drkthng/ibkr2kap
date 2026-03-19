@@ -321,29 +321,47 @@ with tabs[3]:
     else:
         col_acc, col_year = st.columns(2)
         with col_acc:
-            account_id = st.selectbox("IBKR Account ID", options=available_accounts)
+            account_selection = st.multiselect("IBKR Account ID(s)", options=available_accounts, default=available_accounts[:1] if available_accounts else [])
         
-        # Fetch available years for the selected account
-        with SessionLocal() as session:
-            available_years = get_tax_years_for_account(session, account_id)
+        # Fetch available years for the selected account(s)
+        available_years = []
+        if account_selection:
+            with SessionLocal() as session:
+                if len(account_selection) == 1:
+                    available_years = get_tax_years_for_account(session, account_selection[0])
+                else:
+                    # In combined mode, show only years that are available in ALL selected accounts
+                    year_sets = []
+                    for acc in account_selection:
+                        year_sets.append(set(get_tax_years_for_account(session, acc)))
+                    if year_sets:
+                        available_years = sorted(list(set.intersection(*year_sets)), reverse=True)
         
         with col_year:
-            if not available_years:
-                st.warning("No tax data found for this account.")
+            if not account_selection:
+                st.info("Select at least one account.")
+                tax_year = None
+            elif not available_years:
+                st.warning("No common tax years found for these accounts.")
                 tax_year = None
             else:
                 tax_year = st.selectbox("Tax Year", options=available_years)
         
         if tax_year and st.button("📊 Generate Tax Report"):
-            st.session_state["report_account"] = account_id
+            st.session_state["report_accounts"] = account_selection
             st.session_state["report_year"] = tax_year
 
-        if st.session_state.get("report_account") == account_id and st.session_state.get("report_year") == tax_year:
+        if st.session_state.get("report_accounts") == account_selection and st.session_state.get("report_year") == tax_year:
             with st.spinner("Aggregating tax data..."):
                 try:
                     with SessionLocal() as session:
                         aggregator = TaxAggregatorService(session)
-                        report = aggregator.generate_report(account_id, tax_year)
+                        is_combined = len(account_selection) > 1
+                        
+                        if is_combined:
+                            report = aggregator.generate_combined_report(account_selection, tax_year)
+                        else:
+                            report = aggregator.generate_report(account_selection[0], tax_year)
                         
                         # Check for warnings
                         can_show_report = True
@@ -359,8 +377,6 @@ with tabs[3]:
                             st.session_state["mp_buy_sell"] = "BUY"
                             st.session_state["mp_open_close"] = "O"
 
-
-
                         if report.missing_cost_basis_warnings:
                             st.warning("⚠️ **Missing Cost Basis Detected**")
                             st.error("The following sell trades do not have corresponding buy trades. This will lead to an incorrect taxable gain/loss calculation (treated as 100% gain if not resolved).")
@@ -371,7 +387,6 @@ with tabs[3]:
                                     st.code(warning.message, language="markdown")
                                 with w_col2:
                                     if st.button("📝 Prefill Manual", key=f"prefill_{warning.trade_id}", on_click=set_prefill_state, args=(warning.symbol, warning.asset_category, warning.quantity, warning.date)):
-
                                         st.success(f"Prefilled {warning.symbol}! Go to **📝 Manual Positions** tab.")
                             
                             st.info("💡 You can provide cost basis for these positions in the **📝 Manual Positions** tab, then re-run the FIFO Engine.")
@@ -381,7 +396,11 @@ with tabs[3]:
                         
                         if can_show_report:
                             # Display Metrics
-                            st.subheader(f"Report Summary for {account_id} ({tax_year})")
+                            report_title = f"Combined Report Summary ({tax_year})" if is_combined else f"Report Summary for {account_selection[0]} ({tax_year})"
+                            st.subheader(report_title)
+                            
+                            if is_combined:
+                                st.info(f"📊 **Accounts Included**: {', '.join(account_selection)}")
                             m1, m2, m3 = st.columns(3)
                             m1.metric("KAP Line 7 (Dividenden / Zinsen / Ausgleichszahlungen / Sonstige)", f"{report.kap_line_7_kapitalertraege:,.2f} €", help=KAP_TOOLTIPS["kap_line_7"])
                             m2.metric("KAP Line 8 (Aktien-Veräußerungsgewinne)", f"{report.kap_line_8_gewinne_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_8"])
@@ -419,6 +438,21 @@ with tabs[3]:
                                     "auf dem Blatt **Marginkosten (Info)**."
                                 )
 
+                            if is_combined:
+                                st.divider()
+                                st.subheader("Individual Account Breakdowns")
+                                for acc_rep in report.per_account_reports:
+                                    with st.expander(f"📊 Details for {acc_rep.account_id}"):
+                                        am1, am2, am3 = st.columns(3)
+                                        am1.metric("KAP 7", f"{acc_rep.kap_line_7_kapitalertraege:,.2f} €")
+                                        am2.metric("KAP 8", f"{acc_rep.kap_line_8_gewinne_aktien:,.2f} €")
+                                        am3.metric("KAP 9", f"{acc_rep.kap_line_9_verluste_aktien:,.2f} €")
+                                        
+                                        am4, am5, am6 = st.columns(3)
+                                        am4.metric("KAP 10", f"{acc_rep.kap_line_10_termingeschaefte:,.2f} €")
+                                        am5.metric("SO FX", f"{acc_rep.so_fx_gains_total:,.2f} €")
+                                        am6.metric("Total PnL", f"{acc_rep.total_realized_pnl:,.2f} €")
+
                             with st.expander("ℹ️ Was bedeuten diese Zeilen?"):
                                 st.markdown(
                                     "| Zeile | Bezeichnung | Erklärung |\n"
@@ -428,19 +462,18 @@ with tabs[3]:
                                     "| **9** | Verluste Aktien | Aktienverluste (Absolutwert) — nur mit Aktiengewinnen verrechenbar |\n"
                                     "| **10** | Termingeschäfte | Netto-Ergebnis aus Optionen und Futures |\n"
                                     "| **15** | Quellensteuer | Anrechenbare ausländische Steuern (z.B. US-Withholding Tax) |\n"
-
                                     "\n"
-                                    '> 📖 Ausführliche Erklärungen finden Sie im Tab **"Tax Guide"** und in der Datei `docs/GERMAN_TAX_THEORY.md`.'
+                                    "> 📖 Ausführliche Erklärungen finden Sie im Tab **\"Tax Guide\"** und in der Datei `docs/GERMAN_TAX_THEORY.md`."
                                 )
-                            
-                            # Excel Export
                             st.divider()
                             st.subheader("📥 Export to Excel")
                             
                             exporter = ExcelExportService(session)
                             
-                            exporter = ExcelExportService(session)
-                            fname = f"Anlage_KAP_{account_id}_{tax_year}.xlsx"
+                            if is_combined:
+                                fname = f"Anlage_KAP_Combined_{tax_year}.xlsx"
+                            else:
+                                fname = f"Anlage_KAP_{account_selection[0]}_{tax_year}.xlsx"
                             
                             if st.button("💾 Save Anlage KAP Excel Report", type="primary"):
                                 import tkinter as tk
@@ -461,7 +494,10 @@ with tabs[3]:
                                 root.destroy()
                                 
                                 if save_path:
-                                    exporter.export(report, save_path)
+                                    if is_combined:
+                                        exporter.export_combined(report, save_path)
+                                    else:
+                                        exporter.export(report, save_path)
                                     st.success(f"Report saved successfully to `{save_path}`!")
                                     st.info("You can now open the file in Excel.")
                                 else:
