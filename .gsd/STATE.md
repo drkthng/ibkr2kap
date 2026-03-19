@@ -1,18 +1,18 @@
 # STATE.md
 
-> **Current Position**: Phase 35 Planning Complete
+> **Current Position**: Bug Fix Pre-fill Manual Form Complete
 > **Last Updated**: 2026-03-19
 
 ### Current Position
-- **Phase**: 35 (Multi-Account Combined Reporting)
-- **Status**: Planning Complete — Ready for Execution
-- **Last Action**: Created 3 execution plans across 3 waves.
+- **Phase**: 35 (Multi-Account Combined Reporting) - PAUSED for Bug Fix
+- **Status**: Bug Fixed — ready to resume Phase 35
+- **Last Action**: Fixed synchronization issue in manual form pre-filling.
 
 ## Last Session Summary
-- Created Phase 35 plans for Multi-Account Combined Reporting.
-- Plan 35.1 (Wave 1): CombinedTaxReport schema + generate_combined_report aggregation method
-- Plan 35.2 (Wave 2): Combined Excel export with account column in detail tabs
-- Plan 35.3 (Wave 3): Streamlit UI multi-account selection + combined report display
+- Diagnosed and fixed issue where manual form pre-filling failed after the first entry.
+- Removed `clear_on_submit=True` from `st.form` in `src/app.py`.
+- Implemented robust manual session state clearing in the form submission handler.
+- Standardized `set_prefill_state` callback to ensure all fields are initialized.
 
 ## Next Steps
 - [ ] /execute 35
