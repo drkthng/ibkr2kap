@@ -179,6 +179,9 @@ class TaxAggregatorService:
             so_fx_gains_tax_free=so_fx_tax_free,
             so_fx_freigrenze_applies=so_freigrenze_applies,
             margin_interest_paid=margin_interest_paid,
-            total_realized_pnl=total_pnl + so_fx_total,
+            aktien_net_result=kap_8 - kap_9,
+            allgemeiner_topf_result=kap_7 + kap_10,
+            dividends_interest_total=dividends_interest,
+            sonstige_gains_total=sonstige_gains,
             missing_cost_basis_warnings=warnings
         )

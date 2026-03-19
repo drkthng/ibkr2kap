@@ -53,6 +53,19 @@
 **Verification**:
 - TBD
 
+---
+
+### Phase 36: Report Output Remodel (Tax-Law Compliant)
+- **Status**: [COMPLETED] 2026-03-19
+- **Objective**: Remodel report outputs to respect the German "Zwei-Töpfe" principle (§ 20 Abs. 6 EStG).
+- **Dependencies**: Phase 33, Phase 35
+- **Tasks**:
+  - [x] Update `TaxReport` schema to include `aktien_net_result` and `allgemeiner_topf_result`.
+  - [x] Modify `TaxAggregatorService` to compute separated tax pools.
+  - [x] Remodel Excel summary sheet for tax-pool clarity.
+  - [x] Update Streamlit UI to display separate pool metrics.
+  - [x] Verify with unit and integration tests.
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Real-time crypto portfolio tracking & FIFO matching.

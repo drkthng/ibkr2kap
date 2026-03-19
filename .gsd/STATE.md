@@ -4,15 +4,14 @@
 > **Last Updated**: 2026-03-19
 
 ### Current Position
-- **Phase**: 35 (Multi-Account Combined Reporting) - PAUSED for Bug Fix
-- **Status**: Bug Fixed — ready to resume Phase 35
-- **Last Action**: Fixed synchronization issue in manual form pre-filling.
+- **Last Completed Phase**: Phase 36 (Report Output Remodel)
+- **Next Phase**: 35 (Multi-Account Combined Reporting)
+- **Status**: Phase 36 Verified & Complete. Ready to resume Phase 35.
 
-## Last Session Summary
-- Diagnosed and fixed issue where manual form pre-filling failed after the first entry.
-- Removed `clear_on_submit=True` from `st.form` in `src/app.py`.
-- Implemented robust manual session state clearing in the form submission handler.
-- Standardized `set_prefill_state` callback to ensure all fields are initialized.
+## session_2026_03_19_summary
+- **Phase 36**: Remodeled Tax Reports for "Zwei-Töpfe" compliance (German § 20 Abs. 6 EStG).
+- **Bug Fix**: Resolved manual form pre-fill synchronization issue (Conversation ff3846be).
+- **Verification**: All 18 tests passed, including E2E and Excel export.
 
 ## Next Steps
 - [ ] /execute 35

@@ -399,7 +399,13 @@ with tabs[3]:
                             m4, m5, m6 = st.columns(3)
                             m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €", help=KAP_TOOLTIPS["kap_line_10"])
                             m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €", help=KAP_TOOLTIPS["kap_line_15"])
-                            m6.metric("Total Realized PnL (KAP + SO)", f"{report.total_realized_pnl:,.2f} €", help=KAP_TOOLTIPS["total_realized_pnl"])
+                            
+                            st.divider()
+                            st.subheader("Zusammenfassung nach Verlusttöpfen")
+                            z1, z2, z3 = st.columns(3)
+                            z1.metric("Aktientopf (Netto)", f"{report.aktien_net_result:,.2f} €", help=KAP_TOOLTIPS["aktien_net_result"])
+                            z2.metric("Allgemeiner Topf result", f"{report.allgemeiner_topf_result:,.2f} €", help=KAP_TOOLTIPS["allgemeiner_topf_result"])
+                            z3.metric("Anlage SO (FX Gesamt)", f"{report.so_fx_gains_total:,.2f} €", help="Summe aller Währungsgewinne (Anlage SO).")
                             
                             st.subheader("Anlage SO (§ 23 EStG Fremdwährungsgeschäfte)")
                             s1, s2, s3 = st.columns(3)

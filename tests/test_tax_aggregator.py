@@ -84,8 +84,15 @@ def test_generate_report_with_mixed_data(db_session):
     # Line 15: Withholding Tax (absolute, in EUR) = 15 * 0.9 = 13.5
     assert report.kap_line_15_quellensteuer == Decimal("13.50")
     
-    # Total PnL: 500 - 200 + 200 + 1000 = 1500
-    assert report.total_realized_pnl == Decimal("1500.00")
+    # Aktientopf Net: 500 (G) - 200 (L) = 300
+    assert report.aktien_net_result == Decimal("300.00")
+
+    # Allgemeiner Topf: 1090 (Line 7) + 200 (Line 10) = 1290
+    assert report.allgemeiner_topf_result == Decimal("1290.00")
+
+    # Sub-components
+    assert report.dividends_interest_total == Decimal("90.00")
+    assert report.sonstige_gains_total == Decimal("1000.00")
 
 def test_generate_report_empty_year(db_session):
     acc = Account(account_id="U9999999")
@@ -97,7 +104,8 @@ def test_generate_report_empty_year(db_session):
 
     assert report.kap_line_7_kapitalertraege == Decimal("0.00")
     assert report.kap_line_8_gewinne_aktien == Decimal("0.00")
-    assert report.total_realized_pnl == Decimal("0.00")
+    assert report.aktien_net_result == Decimal("0.00")
+    assert report.allgemeiner_topf_result == Decimal("0.00")
 
 def test_generate_report_with_missing_cost_basis(db_session):
     from ibkr_tax.models.database import FIFOLot

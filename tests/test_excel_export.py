@@ -93,7 +93,10 @@ def test_summary_sheet_values(db_session, tmp_path):
         kap_line_9_verluste_aktien=Decimal("200.00"),
         kap_line_10_termingeschaefte=Decimal("150.00"),
         kap_line_15_quellensteuer=Decimal("15.00"),
-        total_realized_pnl=Decimal("600.00")
+        aktien_net_result=Decimal("300.00"),
+        allgemeiner_topf_result=Decimal("250.00"),
+        dividends_interest_total=Decimal("100.00"),
+        sonstige_gains_total=Decimal("0.00")
     )
     output_file = str(tmp_path / "summary_test.xlsx")
     
@@ -106,22 +109,26 @@ def test_summary_sheet_values(db_session, tmp_path):
     # Map row contents to values
     # Col A is Zeile, Col B is description, Col C is value
     data = {}
-    for row in range(5, 25):
+    for row in range(5, 30):
         zeile = ws.cell(row=row, column=1).value
         desc = ws.cell(row=row, column=2).value
         val = ws.cell(row=row, column=3).value
         
         if zeile:
             data[str(zeile)] = val
-        elif desc and "Gesamt Realisierter Kursgewinn" in str(desc):
-            data["TOTAL"] = val
+        elif desc:
+            if "Aktientopf" in str(desc):
+                data["AKTIEN_NET"] = val
+            elif "Allgemeiner Topf" in str(desc):
+                data["ALLG_TOPF"] = val
             
     assert Decimal(str(data["7"])) == Decimal("100.00")
     assert Decimal(str(data["8"])) == Decimal("500.00")
     assert Decimal(str(data["9"])) == Decimal("200.00")
     assert Decimal(str(data["10"])) == Decimal("150.00")
     assert Decimal(str(data["15"])) == Decimal("15.00")
-    assert Decimal(str(data["TOTAL"])) == Decimal("600.00")
+    assert Decimal(str(data["AKTIEN_NET"])) == Decimal("300.00") # 500 - 200
+    assert Decimal(str(data["ALLG_TOPF"])) == Decimal("250.00") # 100 + 150
 
 def test_gains_detail_sheet_row_count(db_session, tmp_path):
     # Setup 2 gains in DB

@@ -72,7 +72,8 @@ def test_full_multi_year_e2e(db_session, monkeypatch):
     
     # SPX Put expired -> Premium received was 5000 USD * 0.9 = 4500 EUR gain in Termingeschäfte
     assert report_2023.kap_line_10_termingeschaefte == Decimal("4500.00")
-    assert report_2023.total_realized_pnl == Decimal("4500.00")
+    assert report_2023.aktien_net_result == Decimal("0.00")
+    assert report_2023.allgemeiner_topf_result == Decimal("4500.00")
 
     # --- 2024: Corporate Actions & Exercise & Partial Exit ---
     # 1. AAPL Split 2:1 on 2024-03-01

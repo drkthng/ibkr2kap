@@ -32,9 +32,13 @@ KAP_TOOLTIPS: dict[str, str] = {
         "einbehaltene Quellensteuern auf Dividenden/Zinsen. "
         "Können auf die deutsche Steuer angerechnet werden (§ 32d Abs. 5 EStG)."
     ),
-    "total_realized_pnl": (
-        "Gesamt realisierter Gewinn/Verlust: Summe aller realisierten "
-        "Ergebnisse aus Wertpapierverkäufen vor Steuer, über alle Tax Pools hinweg."
+    "aktien_net_result": (
+        "Aktientopf (Netto): Das steuerliche Ergebnis aller Aktienveräußerungen (Zeile 8 minus Zeile 9). "
+        "Dieser Topf ist isoliert: Verluste können nur mit Aktiengewinnen verrechnet werden."
+    ),
+    "allgemeiner_topf_result": (
+        "Allgemeiner Topf: Das kombinierte Ergebnis aus Dividenden, Zinsen, sonstigen Gewinnen (ETFs) "
+        "und Termingeschäften (Optionen/Futures). Diese Erträge können untereinander verrechnet werden."
     ),
 }
 

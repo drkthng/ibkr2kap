@@ -93,9 +93,15 @@ class ExcelExportService:
             ("", "  - Davon steuerfrei (> 1 Jahr)", report.so_fx_gains_tax_free),
             ("", "  - Freigrenze (1000€) unterschritten?", "JA" if report.so_fx_freigrenze_applies else "NEIN"),
             ("", "", ""),
-            ("", "Gesamt Realisierter Kursgewinn (Trading PnL + FX PnL)", report.total_realized_pnl),
-            ("", "  Formel: (8) - (9) + (10) + (Sonstige Kursgewinne in 7) + (SO FX Gesamt)", ""),
-            ("", "  Hinweis: Dividenden und Zinsen sind NICHT in dieser Summe enthalten.", "")
+            ("", "Zusammenfassung nach Verlusttöpfen (§ 20 Abs. 6 EStG)", ""),
+            ("", "Aktientopf (Netto: Zeile 8 - 9)", report.aktien_net_result),
+            ("", "  Hinweis: Nur mit Aktiengewinnen verrechenbar.", ""),
+            ("", "Allgemeiner Topf (Zeile 7 + 10)", report.allgemeiner_topf_result),
+            ("", "  - davon Dividenden & Zinsen", report.dividends_interest_total),
+            ("", "  - davon Sonstige Kursgewinne (ETFs, etc.)", report.sonstige_gains_total),
+            ("", "  - davon Termingeschäfte (netto)", report.kap_line_10_termingeschaefte),
+            ("", "", ""),
+            ("", "Marginkosten (Info, nicht abzugsfähig)", report.margin_interest_paid),
         ]
         
         for r_idx, (zeile, desc, val) in enumerate(kap_rows, 5):

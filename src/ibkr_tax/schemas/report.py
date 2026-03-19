@@ -46,8 +46,16 @@ class TaxReport(BaseModel):
     # Informational: Margin interest paid (not deductible per § 20 Abs. 9 EStG)
     margin_interest_paid: Decimal = Field(default=Decimal("0.00"))
 
-    # Summary Field
-    total_realized_pnl: Decimal = Field(default=Decimal("0.00"))
+    # === Tax-Pool Summary Fields ===
+    # Aktientopf: Net result (Line 8 - Line 9) — stands alone, cannot offset other pools
+    aktien_net_result: Decimal = Field(default=Decimal("0.00"))
+
+    # Allgemeiner Topf: Line 7 + Line 10 — dividends, interest, sonstige, termingeschäfte can cross-offset
+    allgemeiner_topf_result: Decimal = Field(default=Decimal("0.00"))
+
+    # Sub-components for transparency
+    dividends_interest_total: Decimal = Field(default=Decimal("0.00"))
+    sonstige_gains_total: Decimal = Field(default=Decimal("0.00"))
 
     # Warnings
     missing_cost_basis_warnings: list[MissingCostBasisWarning] = Field(default_factory=list)
