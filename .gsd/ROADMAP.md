@@ -42,15 +42,16 @@
 
 ---
 
-### Phase 35: Multi-Account Combined Reporting
-**Status**: ⬜ Not Started
+### **Phase 35: Multi-Account [GSD: Completed]**
+    - [x] Combined Report Schema & Aggregation (Wave 1)
+    - [x] Combined Excel Export (Wave 2)
+    - [x] Streamlit UI Multi-Account Selection (Wave 3)
 **Objective**: Ability to create a combined report for multiple accounts while still showing individual account summaries. Include account origin in detail tabs.
 **Depends on**: Phase 34
 
 **Tasks**:
 - [ ] TBD (run /plan 35 to create)
 
-**Verification**:
 - TBD
 
 ---

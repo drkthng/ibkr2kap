@@ -2,7 +2,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from ibkr_tax.models.database import Trade, Gain, CashTransaction, FXGain
-from ibkr_tax.schemas.report import TaxReport
+from ibkr_tax.schemas.report import TaxReport, CombinedTaxReport
 
 class TaxAggregatorService:
     def __init__(self, session: Session):
@@ -185,3 +185,37 @@ class TaxAggregatorService:
             sonstige_gains_total=sonstige_gains,
             missing_cost_basis_warnings=warnings
         )
+
+    def generate_combined_report(self, account_identifiers: list[str], tax_year: int) -> CombinedTaxReport:
+        """
+        Generates a combined tax report for multiple accounts.
+        """
+        reports = [self.generate_report(acc, tax_year) for acc in account_identifiers]
+
+        # Use CombinedTaxReport for the final result
+        combined = CombinedTaxReport(
+            account_ids=account_identifiers,
+            tax_year=tax_year,
+            per_account_reports=reports
+        )
+
+        for r in reports:
+            combined.kap_line_7_kapitalertraege += r.kap_line_7_kapitalertraege
+            combined.kap_line_8_gewinne_aktien += r.kap_line_8_gewinne_aktien
+            combined.kap_line_9_verluste_aktien += r.kap_line_9_verluste_aktien
+            combined.kap_line_10_termingeschaefte += r.kap_line_10_termingeschaefte
+            combined.kap_line_15_quellensteuer += r.kap_line_15_quellensteuer
+            
+            combined.so_fx_gains_total += r.so_fx_gains_total
+            combined.so_fx_gains_taxable_1y += r.so_fx_gains_taxable_1y
+            combined.so_fx_gains_tax_free += r.so_fx_gains_tax_free
+            
+            combined.margin_interest_paid += r.margin_interest_paid
+            combined.total_realized_pnl += r.total_realized_pnl
+            
+            combined.missing_cost_basis_warnings.extend(r.missing_cost_basis_warnings)
+
+        # Re-calc freigrenze based on combined totals
+        combined.so_fx_freigrenze_applies = combined.so_fx_gains_taxable_1y > 0 and combined.so_fx_gains_taxable_1y < 1000
+
+        return combined

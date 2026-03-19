@@ -246,3 +246,71 @@ def test_margin_interest_handling(db_session):
     
     # Informational field should include absolute paid interest: 50 + 30 = 80
     assert report.margin_interest_paid == Decimal("80.00")
+
+def test_generate_combined_report_two_accounts(db_session):
+    # 1. Setup 2 Accounts
+    acc_a = Account(account_id="U_ACCT_A")
+    acc_b = Account(account_id="U_ACCT_B")
+    db_session.add_all([acc_a, acc_b])
+    db_session.commit()
+
+    # 2. Add data for Account A
+    # Gain: +300 in Aktien
+    t_a = Trade(ib_trade_id="T_A", account_id=acc_a.id, symbol="AAPL", asset_category="STK", 
+                description="Apple Inc",
+                trade_date="2024-01-01", settle_date="2024-01-03", currency="EUR", 
+                fx_rate_to_base=Decimal("1.0"), quantity=Decimal("-10"), trade_price=Decimal("130"), 
+                proceeds=Decimal("1300"), buy_sell="SELL")
+    db_session.add(t_a)
+    db_session.commit()
+    g_a = Gain(sell_trade_id=t_a.id, buy_lot_id=100, quantity_matched=10, tax_year=2024, 
+               proceeds=Decimal("1300"), cost_basis_matched=Decimal("1000"), realized_pnl=Decimal("300"), tax_pool="Aktien")
+    # Dividend for A: 100 USD * 0.9 = 90 EUR
+    c_a = CashTransaction(account_id=acc_a.id, symbol="AAPL", description="Dividend", 
+                          date_time="2024-05-01", settle_date="2024-05-03", amount=Decimal("100.00"), 
+                          type="Dividends", currency="USD", fx_rate_to_base=Decimal("0.9"),
+                          report_date="2024-05-01")
+    db_session.add_all([g_a, c_a])
+
+    # 3. Add data for Account B
+    # Gain: +200 in Aktien
+    t_b = Trade(ib_trade_id="T_B", account_id=acc_b.id, symbol="MSFT", asset_category="STK", 
+                description="Microsoft Corp",
+                trade_date="2024-02-01", settle_date="2024-02-03", currency="EUR", 
+                fx_rate_to_base=Decimal("1.0"), quantity=Decimal("-5"), trade_price=Decimal("240"), 
+                proceeds=Decimal("1200"), buy_sell="SELL")
+    db_session.add(t_b)
+    db_session.commit()
+    g_b = Gain(sell_trade_id=t_b.id, buy_lot_id=200, quantity_matched=5, tax_year=2024, 
+               proceeds=Decimal("1200"), cost_basis_matched=Decimal("1000"), realized_pnl=Decimal("200"), tax_pool="Aktien")
+    # Dividend for B: 50 EUR * 1.0 = 50 EUR
+    c_b = CashTransaction(account_id=acc_b.id, symbol="MSFT", description="Dividend", 
+                          date_time="2024-06-01", settle_date="2024-06-03", amount=Decimal("50.00"), 
+                          type="Dividends", currency="EUR", fx_rate_to_base=Decimal("1.0"),
+                          report_date="2024-06-01")
+    db_session.add_all([g_b, c_b])
+    db_session.commit()
+
+    # 4. Run Combined Aggregator
+    service = TaxAggregatorService(db_session)
+    combined = service.generate_combined_report(["U_ACCT_A", "U_ACCT_B"], 2024)
+
+    # 5. Assertions
+    assert len(combined.account_ids) == 2
+    assert len(combined.per_account_reports) == 2
+    
+    # Combined KAP Line 7: 90 + 50 = 140
+    assert combined.kap_line_7_kapitalertraege == Decimal("140.00")
+    # Combined KAP Line 8: 300 + 200 = 500
+    assert combined.kap_line_8_gewinne_aktien == Decimal("500.00")
+    # Total PnL: 300 + 200 = 500
+    assert combined.total_realized_pnl == Decimal("500.00")
+
+    # Verify per-account breakdowns
+    report_a = next(r for r in combined.per_account_reports if r.account_id == "U_ACCT_A")
+    assert report_a.kap_line_8_gewinne_aktien == Decimal("300.00")
+    assert report_a.kap_line_7_kapitalertraege == Decimal("90.00")
+
+    report_b = next(r for r in combined.per_account_reports if r.account_id == "U_ACCT_B")
+    assert report_b.kap_line_8_gewinne_aktien == Decimal("200.00")
+    assert report_b.kap_line_7_kapitalertraege == Decimal("50.00")
