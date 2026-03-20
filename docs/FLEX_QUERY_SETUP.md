@@ -184,7 +184,6 @@ Crucial for tracking positions moved between accounts or external brokers.
 | Statement of Funds | Cash flow, not tax-relevant |
 | Trade Confirmations | Duplicate of Trades |
 | Unbooking | Not relevant |
-| Unbooking | Not relevant |
 
 ## 4. Summary: Your Flex Query Configuration
 
