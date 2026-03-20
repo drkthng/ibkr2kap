@@ -129,7 +129,7 @@ def update_status(msg, type="info"):
 # --- Main UI ---
 st.title(TR["title"])
 
-tabs = st.tabs(TR["tabs"])
+tabs = st.tabs(TABS_LIST)
 
 # --- Tab 1: Data Import ---
 with tabs[0]:
