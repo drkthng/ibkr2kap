@@ -67,6 +67,15 @@
   - [x] Update Streamlit UI to display separate pool metrics.
   - [x] Verify with unit and integration tests.
 
+---
+
+### Phase 37: Localization & UX Polish
+- **Status**: [PLANNED]
+- **Objective**: Implement persistent background logging, English/German language switch, and update documentation.
+- **Dependencies**: Phase 36
+- **Tasks**:
+  - [ ] TBD (run /plan 37 to create)
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Real-time crypto portfolio tracking & FIFO matching.
