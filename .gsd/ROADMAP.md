@@ -70,7 +70,7 @@
 ---
 
 ### Phase 37: Localization & UX Polish
-- **Status**: [PLANNED]
+- **Status**: [COMPLETED]
 - **Objective**: Implement persistent background logging, English/German language switch, and update documentation.
 - **Dependencies**: Phase 36
 - **Tasks**:

@@ -69,6 +69,7 @@ Because IBKR2KAP processes sensitive financial data, it is designed to be run lo
 
 1.  **Export from IBKR:** 
     *   Please follow our detailed guide: **[Interactive Brokers Flex Query Setup Guide](docs/FLEX_QUERY_SETUP.md)**.
+    *   **CRITICAL:** Your Flex Query **MUST** include the **Transfers** section (in addition to Trades, Cash Transactions, Corporate Actions, and Option Exercises) to ensure cost-basis continuity across multi-account moves.
     *   *Note:* IBKR limits Flex Queries to 365 days. You must export multiple XML files to cover your history, or export an Activity Statement CSV.
     *   Export as **XML** (or CSV).
 2.  **Import to IBKR2KAP:** Open the Streamlit app in your browser, upload ALL your exported files at once.

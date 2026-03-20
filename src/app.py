@@ -12,6 +12,56 @@ from ibkr_tax.services.tax_tooltips import KAP_TOOLTIPS, TAX_POOL_EXPLANATIONS
 from ibkr_tax.models.database import Base, Account
 from decimal import Decimal
 import pandas as pd
+from datetime import date
+
+# --- Translations ---
+UI_STRINGS = {
+    "en": {
+        "sidebar_title": "IBKR2KAP",
+        "sidebar_info": "Local-first tax assistant for German IBKR users.",
+        "lang_label": "Global Language / Sprache",
+        "title": "🛡️ IBKR2KAP — Tax Reporting",
+        "import_header": "Import IBKR Data",
+        "import_desc": "Upload your **Flex Query XML** or **Activity Statement CSV** files here. Data is stored locally.",
+        "btn_process_xml": "Process XML",
+        "btn_process_csv": "Process CSV",
+        "fifo_header": "FIFO Matching & Tax Allocation",
+        "btn_run_fifo": "🚀 Run FIFO Engine (All Accounts)",
+        "manual_header": "📝 Manual Cost-Basis Entry",
+        "report_header": "Anlage KAP Generation",
+        "btn_gen_report": "📊 Generate Tax Report",
+        "status_parsing": "Parsing {}...",
+        "status_success": "Successfully processed {}",
+        "status_db_reset": "Database has been reset.",
+        "missing_cost_warning": "⚠️ **Missing Cost Basis Detected**",
+        "save_btn": "💾 Save Anlage KAP Excel Report",
+    },
+    "de": {
+        "sidebar_title": "IBKR2KAP",
+        "sidebar_info": "Lokaler Steuer-Assistent für deutsche IBKR-Nutzer.",
+        "lang_label": "Sprache / Language",
+        "title": "🛡️ IBKR2KAP — Steuerbericht",
+        "import_header": "IBKR Daten importieren",
+        "import_desc": "Laden Sie Ihre **Flex Query XML** oder **Activity Statement CSV** Dateien hier hoch. Die Daten werden lokal gespeichert.",
+        "btn_process_xml": "XML verarbeiten",
+        "btn_process_csv": "CSV verarbeiten",
+        "fifo_header": "FIFO-Matching & Steuerzuordnung",
+        "btn_run_fifo": "🚀 FIFO-Engine starten (Alle Konten)",
+        "manual_header": "📝 Manuelle Anschaffungskosten",
+        "report_header": "Anlage KAP Erstellung",
+        "btn_gen_report": "📊 Steuerbericht erstellen",
+        "status_parsing": "Verarbeite {}...",
+        "status_success": "{} erfolgreich verarbeitet",
+        "status_db_reset": "Datenbank wurde zurückgesetzt.",
+        "missing_cost_warning": "⚠️ **Fehlende Anschaffungskosten erkannt**",
+        "save_btn": "💾 Anlage KAP Excel-Bericht speichern",
+    }
+}
+
+UI_TABS = {
+    "en": ["📁 Data Import", "⚙️ Tax Processing", "📝 Manual Positions", "📊 Anlage KAP Report", "🗄️ Database Browser", "📖 Tax Guide"],
+    "de": ["📁 Daten-Import", "⚙️ Steuer-Verarbeitung", "📝 Manuelle Positionen", "📊 Anlage KAP Bericht", "🗄️ Datenbank-Browser", "📖 Steuer-Leitfaden"]
+}
 
 # --- Page Config ---
 st.set_page_config(
@@ -50,28 +100,50 @@ SessionLocal = get_session(engine)
 
 # --- Sidebar ---
 st.sidebar.title("IBKR2KAP")
-st.sidebar.info("Local-first tax assistant for German IBKR users.")
+lang = st.sidebar.selectbox("Language / Sprache", options=["en", "de"], index=1 if st.session_state.get("language") == "de" else 0)
+st.session_state["language"] = lang
+TR = UI_STRINGS[lang]
+TABS_LIST = UI_TABS[lang]
+
+st.sidebar.info(TR["sidebar_info"])
+
+# --- Status Center (Persistent) ---
+status_container = st.sidebar.container()
+status_container.write("### 📢 Status")
+if "last_status" not in st.session_state:
+    st.session_state["last_status"] = "Ready."
+status_area = status_container.empty()
+status_area.info(st.session_state["last_status"])
+
+def update_status(msg, type="info"):
+    st.session_state["last_status"] = msg
+    if type == "info":
+        status_area.info(msg)
+    elif type == "success":
+        status_area.success(msg)
+    elif type == "warning":
+        status_area.warning(msg)
+    elif type == "error":
+        status_area.error(msg)
 
 # --- Main UI ---
-st.title("🛡️ IBKR2KAP — Tax Reporting")
+st.title(TR["title"])
 
-tabs = st.tabs(["📁 Data Import", "⚙️ Tax Processing", "📝 Manual Positions", "📊 Anlage KAP Report", "🗄️ Database Browser", "📖 Tax Guide"])
+tabs = st.tabs(TR["tabs"])
 
 # --- Tab 1: Data Import ---
 with tabs[0]:
-    st.header("Import IBKR Data")
-    st.markdown("""
-    Upload your **Flex Query XML** or **Activity Statement CSV** files here.
-    Data is stored locally in your SQLite database.
-    """)
+    st.header(TR["import_header"])
+    st.markdown(TR["import_desc"])
     
     col1, col2 = st.columns(2)
     
     with col1:
         xml_files = st.file_uploader("Upload Flex XML", type=["xml"], accept_multiple_files=True)
         if xml_files:
-            if st.button("Process XML"):
+            if st.button(TR["btn_process_xml"]):
                 for xml_file in xml_files:
+                    update_status(TR["status_parsing"].format(xml_file.name))
                     with st.spinner(f"Parsing {xml_file.name}..."):
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp:
                             tmp.write(xml_file.getvalue())
@@ -81,6 +153,7 @@ with tabs[0]:
                             with SessionLocal() as session:
                                 results = run_import(tmp_path, session, file_type="xml")
                                 session.commit()
+                                update_status(TR["status_success"].format(xml_file.name), type="success")
                                 st.success(f"Successfully processed {xml_file.name}")
                                 st.json(results["counts"])
                                 
@@ -97,8 +170,9 @@ with tabs[0]:
     with col2:
         csv_files = st.file_uploader("Upload Activity CSV (Fallback)", type=["csv"], accept_multiple_files=True)
         if csv_files:
-            if st.button("Process CSV"):
+            if st.button(TR["btn_process_csv"]):
                 for csv_file in csv_files:
+                    update_status(TR["status_parsing"].format(csv_file.name))
                     with st.spinner(f"Parsing {csv_file.name}..."):
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
                             tmp.write(csv_file.getvalue())
@@ -108,6 +182,7 @@ with tabs[0]:
                             with SessionLocal() as session:
                                 results = run_import(tmp_path, session, file_type="csv")
                                 session.commit()
+                                update_status(TR["status_success"].format(csv_file.name), type="success")
                                 st.success(f"Successfully processed {csv_file.name}")
                                 st.json(results["counts"])
                                 
@@ -138,28 +213,26 @@ with tabs[0]:
 
 # --- Tab 2: Tax Processing (Placeholder for Plan 12.2) ---
 with tabs[1]:
-    st.header("FIFO Matching & Tax Allocation")
+    st.header(TR["fifo_header"])
     st.markdown("""
     Run the FIFO matching engine to calculate realized gains and losses across all accounts.
-    This process:
-    1. Clears existing FIFO matches for all accounts.
-    2. Matches Sell trades against Buy lots in FIFO order.
-    3. Allocates results to German tax pools (Aktien vs. Termingeschäfte).
     """)
     
-    if st.button("🚀 Run FIFO Engine (All Accounts)"):
+    if st.button(TR["btn_run_fifo"]):
         with st.spinner("Executing FIFO logic..."):
             try:
+                update_status("Running FIFO Engine...")
                 with SessionLocal() as session:
                     runner = FIFORunner(session)
                     runner.run_all()
+                    update_status("FIFO Engine Complete", type="success")
                     st.success("FIFO calculation complete for all accounts!")
             except Exception as e:
                 st.error(f"Error running FIFO: {e}")
 
 # --- Tab 3: Manual Positions ---
 with tabs[2]:
-    st.header("📝 Manual Cost-Basis Entry")
+    st.header(TR["manual_header"])
     st.markdown("""
     If you sold positions that were **acquired before your XML data range**, they will appear as
     "Missing Cost Basis" warnings in the Anlage KAP report.
@@ -312,7 +385,7 @@ with tabs[2]:
 
 # --- Tab 4: Anlage KAP Report ---
 with tabs[3]:
-    st.header("Anlage KAP Generation")
+    st.header(TR["report_header"])
     st.markdown("Generate the final tax report figures for a specific account and year.")
     # Fetch available accounts
     with SessionLocal() as session:
@@ -337,7 +410,10 @@ with tabs[3]:
                     for acc in account_selection:
                         year_sets.append(set(get_tax_years_for_account(session, acc)))
                     if year_sets:
-                        available_years = sorted(list(set.intersection(*year_sets)), reverse=True)
+                        intersected = year_sets[0]
+                        for s in year_sets[1:]:
+                            intersected = intersected.intersection(s)
+                        available_years = sorted(list(intersected), reverse=True)
         
         with col_year:
             if not account_selection:
@@ -349,9 +425,10 @@ with tabs[3]:
             else:
                 tax_year = st.selectbox("Tax Year", options=available_years)
         
-        if tax_year and st.button("📊 Generate Tax Report"):
+        if tax_year and st.button(TR["btn_gen_report"]):
             st.session_state["report_accounts"] = account_selection
             st.session_state["report_year"] = tax_year
+            update_status(f"Generating report for {tax_year}...")
 
         if st.session_state.get("report_accounts") == account_selection and st.session_state.get("report_year") == tax_year:
             with st.spinner("Aggregating tax data..."):
@@ -385,9 +462,10 @@ with tabs[3]:
                             st.session_state["mp_proceeds"] = 0.0
                             st.session_state["mp_comm"] = 0.0
                             st.session_state["mp_desc"] = f"Manual cost basis for {sym}"
+                            update_status(f"Prefilled {sym}")
 
                         if report.missing_cost_basis_warnings:
-                            st.warning("⚠️ **Missing Cost Basis Detected**")
+                            st.warning(TR["missing_cost_warning"])
                             st.error("The following sell trades do not have corresponding buy trades. This will lead to an incorrect taxable gain/loss calculation (treated as 100% gain if not resolved).")
                             for warning in report.missing_cost_basis_warnings:
                                 w_col1, w_col2 = st.columns([4, 1])
@@ -489,7 +567,7 @@ with tabs[3]:
                             else:
                                 fname = f"Anlage_KAP_{account_selection[0]}_{tax_year}.xlsx"
                             
-                            if st.button("💾 Save Anlage KAP Excel Report", type="primary"):
+                            if st.button(TR["save_btn"], type="primary"):
                                 import tkinter as tk
                                 from tkinter import filedialog
                                 

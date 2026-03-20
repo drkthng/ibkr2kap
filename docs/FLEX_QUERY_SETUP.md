@@ -150,6 +150,27 @@ Very important! This section is separate from Trades and contains the special op
 ### ☑️ Section 6: Interest Accruals (Optional)
 For accrued interest on bonds. Only necessary if you trade bonds.
 
+### ✅ Section 7: Transfers (MANDATORY for Multi-Account/FIFO)
+
+Crucial for tracking positions moved between accounts or external brokers.
+
+| Field | Do we need it? | Why |
+| :--- | :---: | :--- |
+| DateTime | ✅ | When it happened |
+| SettleDate | ✅ | Settlement date |
+| Symbol | ✅ | Which asset |
+| ISIN | ✅ | Identifier |
+| Description | ✅ | Details |
+| Type | ✅ | INTERNAL, INTERCOMPANY, ACATS, etc. |
+| Direction | ✅ | IN or OUT |
+| Quantity | ✅ | Shares/Units |
+| Currency | ✅ | |
+| FXRateToBase | ✅ | |
+| Account | ✅ | Counterparty account ID |
+| PositionAmount | ✅ | Local currency value |
+| PositionAmountInBase | ✅ | Base currency value |
+| CashTransfer | ✅ | If cash was moved |
+
 ### ❌ Sections We Do NOT Need
 
 | Section | Why not |
@@ -162,7 +183,7 @@ For accrued interest on bonds. Only necessary if you trade bonds.
 | SLB Activities | Securities Lending, only relevant for lenders |
 | Statement of Funds | Cash flow, not tax-relevant |
 | Trade Confirmations | Duplicate of Trades |
-| Transfers | Deposits/Withdrawals, not tax-relevant |
+| Unbooking | Not relevant |
 | Unbooking | Not relevant |
 
 ## 4. Summary: Your Flex Query Configuration
@@ -176,6 +197,7 @@ For accrued interest on bonds. Only necessary if you trade bonds.
 | **✅ Cash Transactions** | (Dividends, Interest) |
 | **✅ Corporate Actions** | (Splits, Mergers) |
 | **✅ Option Exercises** | (Expiration, Exercise, Assignment) |
+| **✅ Transfers** | (Required for FIFO continuity) |
 | **☑️ Open Positions** | (for verification) |
 | **❌ Everything else** | (not needed) |
 
