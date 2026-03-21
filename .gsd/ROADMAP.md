@@ -79,12 +79,14 @@
 ---
 
 ### Phase 38: Termingeschäfte Reporting
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Report gains, losses, and overall result of "Termingeschäfte" in 3 distinct lines/fields in both the UI report and Excel export.
 **Depends on**: Phase 37
 
 **Tasks**:
-- [ ] TBD (run /plan 38 to create)
+- [x] Schema and Aggregator Updates
+- [x] UI and Export Implementations
+- [x] Verification with unit and integration tests
 
 **Verification**:
 - TBD
