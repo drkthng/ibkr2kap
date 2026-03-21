@@ -76,6 +76,19 @@
 - **Tasks**:
   - [ ] TBD (run /plan 37 to create)
 
+---
+
+### Phase 38: Termingeschäfte Reporting
+**Status**: ⬜ Not Started
+**Objective**: Report gains, losses, and overall result of "Termingeschäfte" in 3 distinct lines/fields in both the UI report and Excel export.
+**Depends on**: Phase 37
+
+**Tasks**:
+- [ ] TBD (run /plan 38 to create)
+
+**Verification**:
+- TBD
+
 ## Future Milestone: v2.0 (Planned)
 - [ ] Support for multiple broker imports (Trade Republic, Scalable Capital).
 - [ ] Real-time crypto portfolio tracking & FIFO matching.

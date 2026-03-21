@@ -19,4 +19,5 @@
     - Tasks: [Persistent logging, Language toggle, Documentation updates]
 
 ## Next Steps
-- [ ] /execute 37
+- [x] Phase 38 added: Termingeschäfte Reporting
+- [ ] /plan 38
