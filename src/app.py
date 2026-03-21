@@ -494,14 +494,19 @@ with tabs[3]:
                             m3.metric("KAP Line 9 (Aktien-Veräußerungsverluste)", f"{report.kap_line_9_verluste_aktien:,.2f} €", help=KAP_TOOLTIPS["kap_line_9"])
                             
                             m4, m5, m6 = st.columns(3)
-                            m4.metric("KAP Line 10 (Termingeschäfte)", f"{report.kap_line_10_termingeschaefte:,.2f} €", help=KAP_TOOLTIPS["kap_line_10"])
-                            m5.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €", help=KAP_TOOLTIPS["kap_line_15"])
+                            m4.metric("KAP Line 10 (Termingeschäfte Netto)", f"{report.kap_line_10_termingeschaefte:,.2f} €", help=KAP_TOOLTIPS["kap_line_10"])
+                            m5.metric("  - davon Gewinne", f"{report.kap_termingeschaefte_gains:,.2f} €")
+                            m6.metric("  - davon Verluste", f"{report.kap_termingeschaefte_losses:,.2f} €")
+                            
+                            st.metric("KAP Line 15 (Quellensteuer)", f"{report.kap_line_15_quellensteuer:,.2f} €", help=KAP_TOOLTIPS["kap_line_15"])
                             
                             st.divider()
                             st.subheader("Zusammenfassung nach Verlusttöpfen")
                             z1, z2, z3 = st.columns(3)
                             z1.metric("Aktientopf (Netto)", f"{report.aktien_net_result:,.2f} €", help=KAP_TOOLTIPS["aktien_net_result"])
                             z2.metric("Allgemeiner Topf result", f"{report.allgemeiner_topf_result:,.2f} €", help=KAP_TOOLTIPS["allgemeiner_topf_result"])
+                            # Exploded view for Termingeschäfte in pool summary if desired, 
+                            # but we already show it above. Keeping it simple here.
                             z3.metric("Anlage SO (FX Gesamt)", f"{report.so_fx_gains_total:,.2f} €", help="Summe aller Währungsgewinne (Anlage SO).")
                             
                             st.subheader("Anlage SO (§ 23 EStG Fremdwährungsgeschäfte)")
@@ -541,9 +546,11 @@ with tabs[3]:
                                         am2.metric("KAP 8", f"{acc_rep.kap_line_8_gewinne_aktien:,.2f} €")
                                         am3.metric("KAP 9", f"{acc_rep.kap_line_9_verluste_aktien:,.2f} €")
                                         
-                                        am4, am5 = st.columns(2)
-                                        am4.metric("KAP 10", f"{acc_rep.kap_line_10_termingeschaefte:,.2f} €")
-                                        am5.metric("SO FX", f"{acc_rep.so_fx_gains_total:,.2f} €")
+                                        am4, am5, am6 = st.columns(3)
+                                        am4.metric("KAP 10 Netto", f"{acc_rep.kap_line_10_termingeschaefte:,.2f} €")
+                                        am5.metric("KAP 10 Gewinne", f"{acc_rep.kap_termingeschaefte_gains:,.2f} €")
+                                        am6.metric("KAP 10 Verluste", f"{acc_rep.kap_termingeschaefte_losses:,.2f} €")
+                                        st.metric("SO FX", f"{acc_rep.so_fx_gains_total:,.2f} €")
 
                             with st.expander("ℹ️ Was bedeuten diese Zeilen?"):
                                 st.markdown(

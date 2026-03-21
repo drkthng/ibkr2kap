@@ -92,6 +92,8 @@ def test_summary_sheet_values(db_session, tmp_path):
         kap_line_8_gewinne_aktien=Decimal("500.00"),
         kap_line_9_verluste_aktien=Decimal("200.00"),
         kap_line_10_termingeschaefte=Decimal("150.00"),
+        kap_termingeschaefte_gains=Decimal("200.00"),
+        kap_termingeschaefte_losses=Decimal("50.00"),
         kap_line_15_quellensteuer=Decimal("15.00"),
         aktien_net_result=Decimal("300.00"),
         allgemeiner_topf_result=Decimal("250.00"),
@@ -121,6 +123,10 @@ def test_summary_sheet_values(db_session, tmp_path):
                 data["AKTIEN_NET"] = val
             elif "Allgemeiner Topf" in str(desc):
                 data["ALLG_TOPF"] = val
+            elif "davon Gewinne" in str(desc):
+                data["T_GAINS"] = val
+            elif "davon Verluste" in str(desc):
+                data["T_LOSSES"] = val
             
     assert Decimal(str(data["7"])) == Decimal("100.00")
     assert Decimal(str(data["8"])) == Decimal("500.00")
@@ -129,6 +135,8 @@ def test_summary_sheet_values(db_session, tmp_path):
     assert Decimal(str(data["15"])) == Decimal("15.00")
     assert Decimal(str(data["AKTIEN_NET"])) == Decimal("300.00") # 500 - 200
     assert Decimal(str(data["ALLG_TOPF"])) == Decimal("250.00") # 100 + 150
+    assert Decimal(str(data["T_GAINS"])) == Decimal("200.00")
+    assert Decimal(str(data["T_LOSSES"])) == Decimal("50.00")
 
 def test_gains_detail_sheet_row_count(db_session, tmp_path):
     # Setup 2 gains in DB
