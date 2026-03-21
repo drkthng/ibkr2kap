@@ -1,14 +1,14 @@
 # STATE.md
 
-> **Current Position**: Bug Fix Pre-fill Manual Form Complete
-> **Last Updated**: 2026-03-19
+> **Current Position**: Localization Pass Complete
+> **Last Updated**: 2026-03-21
 
 ### Current State
-- **Phase**: 38 (completed)
+- **Phase**: 39 (completed)
 - **Task**: All tasks complete
 - **Status**: Verified
-- **Branch**: `phase-38`
-- **Next Step**: Prepare for next phase or milestone.
+- **Branch**: `main`
+- **Next Step**: Continuous monitoring and user feedback.
 
 ## session_2026_03_19_summary
 - **Phase 36**: Remodeled Tax Reports for "Zwei-Töpfe" compliance (German § 20 Abs. 6 EStG).
@@ -23,13 +23,14 @@
 - **Phase 38: Termingeschäfte Reporting**
     - **Status**: ✅ Complete
     - **Objective**: Report gains, losses, and overall result of "Termingeschäfte" in 3 distinct lines/fields in both the UI report and Excel export.
-    - **Depends on**: Phase 37
+- **Phase 39: Localization Pass**
+    - **Status**: ✅ Complete
+    - **Objective**: Full localization of the app into German and English.
     - **Tasks**:
-        - [x] Schema and Aggregator Updates
-        - [x] UI and Export Implementations
-        - [x] Verification with unit and integration tests
-        - [x] Updated Excel summary sheet.
-        - [x] Updated Streamlit UI metrics.
+        - [x] Localized `app.py` including all 6 tabs and tax summary.
+        - [x] Localized `tax_tooltips.py` for dynamic language-specific help.
+        - [x] Localized `excel_export.py` for language-aware reports.
+        - [x] Updated UI language toggle integration.
 
 ## Next Steps
-- [ ] /plan 39
+- [ ] Monitor for translation gaps.
