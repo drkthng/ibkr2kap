@@ -33,6 +33,8 @@ class TaxReport(BaseModel):
     
     # Line 10: Gewinne/Verluste aus Termingeschäften (netted)
     kap_line_10_termingeschaefte: Decimal = Field(default=Decimal("0.00"))
+    kap_termingeschaefte_gains: Decimal = Field(default=Decimal("0.00"))
+    kap_termingeschaefte_losses: Decimal = Field(default=Decimal("0.00"))
     
     # Line 15: Ausländische Steuern (Withholding Tax)
     kap_line_15_quellensteuer: Decimal = Field(default=Decimal("0.00"))
@@ -74,6 +76,8 @@ class CombinedTaxReport(BaseModel):
     kap_line_8_gewinne_aktien: Decimal = Field(default=Decimal("0.00"))
     kap_line_9_verluste_aktien: Decimal = Field(default=Decimal("0.00"))
     kap_line_10_termingeschaefte: Decimal = Field(default=Decimal("0.00"))
+    kap_termingeschaefte_gains: Decimal = Field(default=Decimal("0.00"))
+    kap_termingeschaefte_losses: Decimal = Field(default=Decimal("0.00"))
     kap_line_15_quellensteuer: Decimal = Field(default=Decimal("0.00"))
     
     so_fx_gains_total: Decimal = Field(default=Decimal("0.00"))

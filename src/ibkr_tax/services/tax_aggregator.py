@@ -40,6 +40,8 @@ class TaxAggregatorService:
         kap_8 = Decimal("0.00")
         kap_9 = Decimal("0.00")
         kap_10 = Decimal("0.00")
+        kap_10_gains = Decimal("0.00")
+        kap_10_losses = Decimal("0.00")
         sonstige_gains = Decimal("0.00")
         total_pnl = Decimal("0.00")
 
@@ -52,6 +54,10 @@ class TaxAggregatorService:
                     kap_9 += abs(g.realized_pnl)
             elif g.tax_pool == "Termingeschäfte":
                 kap_10 += g.realized_pnl
+                if g.realized_pnl > 0:
+                    kap_10_gains += g.realized_pnl
+                else:
+                    kap_10_losses += abs(g.realized_pnl)
             else:
                 # Sonstige (ETFs, Bonds, etc.)
                 sonstige_gains += g.realized_pnl
@@ -173,6 +179,8 @@ class TaxAggregatorService:
             kap_line_8_gewinne_aktien=kap_8,
             kap_line_9_verluste_aktien=kap_9,
             kap_line_10_termingeschaefte=kap_10,
+            kap_termingeschaefte_gains=kap_10_gains,
+            kap_termingeschaefte_losses=kap_10_losses,
             kap_line_15_quellensteuer=withholding_tax,
             so_fx_gains_total=so_fx_total,
             so_fx_gains_taxable_1y=so_fx_taxable,
@@ -204,6 +212,8 @@ class TaxAggregatorService:
             combined.kap_line_8_gewinne_aktien += r.kap_line_8_gewinne_aktien
             combined.kap_line_9_verluste_aktien += r.kap_line_9_verluste_aktien
             combined.kap_line_10_termingeschaefte += r.kap_line_10_termingeschaefte
+            combined.kap_termingeschaefte_gains += r.kap_termingeschaefte_gains
+            combined.kap_termingeschaefte_losses += r.kap_termingeschaefte_losses
             combined.kap_line_15_quellensteuer += r.kap_line_15_quellensteuer
             
             combined.so_fx_gains_total += r.so_fx_gains_total

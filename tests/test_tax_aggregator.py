@@ -80,6 +80,8 @@ def test_generate_report_with_mixed_data(db_session):
     
     # Line 10: Termingeschäft Gain = 200
     assert report.kap_line_10_termingeschaefte == Decimal("200.00")
+    assert report.kap_termingeschaefte_gains == Decimal("200.00")
+    assert report.kap_termingeschaefte_losses == Decimal("0.00")
     
     # Line 15: Withholding Tax (absolute, in EUR) = 15 * 0.9 = 13.5
     assert report.kap_line_15_quellensteuer == Decimal("13.50")
@@ -303,6 +305,10 @@ def test_generate_combined_report_two_accounts(db_session):
     assert combined.kap_line_7_kapitalertraege == Decimal("140.00")
     # Combined KAP Line 8: 300 + 200 = 500
     assert combined.kap_line_8_gewinne_aktien == Decimal("500.00")
+    
+    # Combined Termingeschäfte (initialized to zero in this test setup)
+    assert combined.kap_termingeschaefte_gains == Decimal("0.00")
+    assert combined.kap_termingeschaefte_losses == Decimal("0.00")
 
     # Verify per-account breakdowns
     report_a = next(r for r in combined.per_account_reports if r.account_id == "U_ACCT_A")
